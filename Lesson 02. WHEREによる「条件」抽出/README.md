@@ -139,6 +139,11 @@ AND time >= 1463640700
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640700|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640811|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640889|
 
 複数のカラムを条件に指定する場合にANDとORを併用する場合，どこまでが条件の範囲なのかを「()」を用いて明示しないと異なる結果をもたらす可能性があります。上記の例は，「td_client_idが指定の3ユーザーで」かつ「timeが1463640700以上」であることを意味しています。
 　　
@@ -157,6 +162,11 @@ AND time >= 1463640700
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640703|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640724|
+|6c94bf0f-39de-4ee2-fc29-f0af74475b71|1463640735|
 
 NOTを使うと判定を反転させることができます。2つ前の例と比べて，この例は「特定の3ユーザー「でない」td_client_id」かつ「timeが1463640700以上」であることを意味しています。これは以下のクエリと同義です。
 
@@ -173,15 +183,23 @@ AND time >= 1463640700
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640703|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640724|
+|6c94bf0f-39de-4ee2-fc29-f0af74475b71|1463640735|
+
 
 NOTを使わない論理演算子による条件文が「特定の××による『絞り込み』」といえるのに対して，NOTを含む条件文は「特定の××を『除外』」といえます。条件を指定する目的が「絞り込み」か「除外」かをまず明確にすることで，論理演算子をうまく活用してください。もちろん，実際においては両者の組合せになることもあります。
 
 # 範囲演算子BETWEENによる条件抽出 [ WHERE BETWEEN A AND B ]
 
 カラムが数値型の場合，「A以上B以下」という範囲を指定したいことがよくあります。「>=」と「<=」を使って下記のように書けば実現できます。
+
 ```sql
 time >= 1463640700 AND time <= 1463727100
 ```
+
 しかし，BETWEENを用いて下記のように書くこともできます。
 
 ```sql
@@ -197,6 +215,11 @@ AND time BETWEEN 1463640700 AND 1463727100
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640700|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640811|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640889|
 
 また，BETWEENの前にNOTを付ければ，指定した範囲「外」のレコードを抽出できます。
 BETWEENは文字列カラムに対しても使えますが，文字列の範囲というのは簡単ではないので使わないほうが無難です。カラムにNULLが入っていた場合はそのレコードは無条件でNULLを返します。
@@ -219,6 +242,11 @@ AND time BETWEEN 1463640700 AND 1463727100
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640700|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640811|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640889|
 
 さらに，NOT INとすることで「除外」，すなわちtd_client_idからリスト内に含まれない値を抽出してこられます。（下記の例では，さらに特定のtime値の範囲で絞り込んでいます。）
 
@@ -236,6 +264,11 @@ AND time BETWEEN 1463640700 AND 1463727100
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time      |
+|------------|----------|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640703|
+|749cd3ba-e549-4fc7-9c83-0263999fa8bf|1463640724|
+|6c94bf0f-39de-4ee2-fc29-f0af74475b71|1463640735|
 
 ## IS NULLの重要性 [ WHERE A IS (NOT) NULL ]
 
@@ -249,6 +282,11 @@ NULLは非常に重要かつセンシティブな概念なので，しっかり�
 SELECT a
 FROM ( VALUES FALSE, TRUE, NULL ) AS t(a)
 ```
+|a         |
+|----------|
+|false     |
+|true      |
+|NULL      |
 
 結果を眺めていきましょう。まず，FALSEとNULLは似ているようで違います。FALSEは型を持ったきちんとした値です。一方，NULLは値でない無を表現する「印」です。SQLにおいては，以下の点をきちんと理解する必要があります。
 
@@ -277,6 +315,10 @@ SELECT a
 FROM ( VALUES FALSE, TRUE, NULL ) AS t(a)
 WHERE a IS NULL
 ```
+|a         |
+|----------|
+|NULL      |
+
 
 以下の例では，1行目と2行目のNULLでないレコードのみを返します。
 
@@ -285,6 +327,10 @@ SELECT a
 FROM ( VALUES FALSE, TRUE, NULL ) AS t(a)
 WHERE a IS NOT NULL
 ```
+|a         |
+|----------|
+|false     |
+|true      |
 
 次は以下を確かめましょう。
 - 0とNULLを比較する演算子には一致するものが存在しないこと
@@ -295,6 +341,11 @@ WHERE a IS NOT NULL
 SELECT a
 FROM ( VALUES 0, 1, NULL ) AS t(a)
 ```
+|a         |
+|----------|
+|0     |
+|1      |
+|NULL      |
 
 最初に，WHEREを使わずSELECT節に論理式を書く形で比較結果を確認してみます。
 
@@ -302,6 +353,12 @@ FROM ( VALUES 0, 1, NULL ) AS t(a)
 SELECT a, a = NULL AS eq_null, a IS NULL AS is_null
 FROM ( VALUES 0, 1, NULL ) AS t(a)
 ```
+|a         |eq_null|is_null|
+|----------|-------|-------|
+|0         |NULL   |false  |
+|1         |NULL   |false  |
+|NULL      |NULL   |true   |
+
 
 結果からわかるように「0 IS NULL」はFALSEとなります。反転した「0 IS NOT NULL」はTRUEとなります。もう少し例を見てみましょう。
 下記の例は，結果が何も得られません。
@@ -319,6 +376,9 @@ SELECT a
 FROM ( VALUES 0, 1, NULL ) AS t(a)
 WHERE a IS NULL
 ```
+|a         |
+|----------|
+|NULL      |
 
 下記の例は，1行目と2行目の0および1が返ります。
 
@@ -327,6 +387,11 @@ SELECT a
 FROM ( VALUES 0, 1, NULL ) AS t(a)
 WHERE a IS NOT NULL
 ```
+|a         |
+|----------|
+|0     |
+|1      |
+
 
 最後に，長さ0の文字列「''」について下記を確認しましょう。
 - 「''」とNULLを比較する演算子には一致するものが存在しないこと
@@ -338,6 +403,11 @@ WHERE a IS NOT NULL
 SELECT a, a = NULL AS eq_null, a IS NULL AS is_null
 FROM ( VALUES '', ' ', NULL ) AS t(a)
 ```
+|a         |eq_null|is_null|
+|----------|-------|-------|
+|          |NULL   |false  |
+|          |NULL   |false  |
+|          |NULL   |true   |
 
 余談ですが，空文字と半角スペースの比較「'' = ' '」はFALSEになります。
 
@@ -359,6 +429,12 @@ FROM
     (1, 1), (1, 2), (1, NULL), (NULL, NULL)
 ) AS t(a,b)
 ```
+|a         |b   |
+|----------|----|
+|1         |1   |
+|1         |2   |
+|1         |NULL|
+|NULL      |NULL|
 
 上記のクエリは，カラムaおよびbが以下の値の組合せになるテーブルを出力します。
 
@@ -376,6 +452,9 @@ FROM
 ) AS t(a,b)
 WHERE a = b
 ```
+|a         |b   |
+|----------|----|
+|1         |1   |
 
 aとbがともにNULLである4行目のレコードが選択されるべきですが，結果には現れていません。
 
@@ -389,6 +468,10 @@ FROM
 ) AS t(a,b)
 WHERE a <> b
 ```
+|a         |b   |
+|----------|----|
+|1         |2   |
+
 
 3行目の1とNULLが異なるものとされるべきですが，同様に結果に現れていません。
 
@@ -421,6 +504,11 @@ FROM
 ) AS t(a,b)
 WHERE a IS NOT DISTINCT FROM b
 ```
+|a         |b   |
+|----------|----|
+|1         |1   |
+|NULL      |NULL|
+
 
 両方ともNULLの組合せも「同じ」として選択されています。NULLに関しても異なるものを絞り込むクエリは下記のようになります。
 
@@ -434,6 +522,10 @@ FROM
 ) AS t(a,b)
 WHERE a IS DISTINCT FROM b
 ```
+|a         |b   |
+|----------|----|
+|1         |2   |
+|1         |NULL|
 
 こちらも1とNULLが「異なる」として選択されています。
 
@@ -461,6 +553,17 @@ SELECT DISTINCT td_os
 FROM sample_accesslog
 WHERE td_os LIKE '_indows%'
 ```
+|td_os     |
+|----------|
+|Windows 7 |
+|Windows 8 |
+|Windows Phone|
+|Windows XP|
+|Windows Vista|
+|Windows RT 8.1|
+|Windows   |
+|Windows 8.1|
+
 
 正解は「Windows」のようですね。
 
@@ -484,6 +587,10 @@ SELECT DISTINCT td_os
 FROM sample_accesslog
 WHERE td_os LIKE 'Windows'
 ```
+|td_os     |
+|----------|
+|Windows   |
+
 
 上記のクエリでは，厳密に「Windows」の文字列だけを含むレコード（前の結果における6行目のレコード）が1つだけがヒットします。「%」や「_」を含まない文字列に対しては，「=」と同じ挙動となっていることがわかります。
 
@@ -492,6 +599,17 @@ SELECT DISTINCT td_os
 FROM sample_accesslog
 WHERE td_os LIKE 'Windows%' --または '%windows%'
 ```
+|td_os     |
+|----------|
+|Windows 8.1|
+|Windows RT 8.1|
+|Windows 7 |
+|Windows 8 |
+|Windows Vista|
+|Windows   |
+|Windows Phone|
+|Windows XP|
+
 
 上記のクエリでは，様々なバージョンのWindowsユーザーすべてにヒットすることができます。「%」は空文字であってもよいので「Windows」だけの文字列もヒットします。
 次に，「Windows 8」と「Windows 8.1」と「Windows RT 8.1」のみにヒットするパターンを考えます。
@@ -502,6 +620,12 @@ FROM sample_accesslog
 WHERE td_os 
 LIKE 'Windows%8%'
 ```
+|td_os     |
+|----------|
+|Windows 8.1|
+|Windows RT 8.1|
+|Windows 8 |
+
 
 さらに「Windows RT 8.1」を除外したい場合はどう書けばよいでしょうか？ 正解は，「8」と「8.1」では「Windows」と「8」の間に1つの空白文字だけがあるのに対し，「RT 8.1」では間に「RT」と空白文字が入っていることに着目して，パターンを「Windows 8%」と書くか，もしくは「_」を利用して下記のように書くことです。
 
@@ -511,6 +635,10 @@ FROM sample_accesslog
 WHERE td_os 
 LIKE 'Windows_8%'
 ```
+|td_os     |
+|----------|
+|Windows 8.1|
+|Windows 8 |
 
 最後に，いくつか注意点を挙げておきます。
 - 「%」や「_」そのものを純粋な文字としてパターンに含ませる場合には，「\%」および「\_」と書く
