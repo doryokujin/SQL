@@ -101,6 +101,12 @@ FROM sample_accesslog
 ORDER BY td_client_id ASC --ASCは昇順（小さい順）
 LIMIT 10                  --LIMIT節は ORDER BY節より後
 ```
+|time      |td_client_id|td_title                                          |
+|----------|------------|--------------------------------------------------|
+|1461454166|000077fb-2c93-4cd7-d9d0-293866aaec31|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|
+|1461454040|000077fb-2c93-4cd7-d9d0-293866aaec31|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|
+|1461454057|000077fb-2c93-4cd7-d9d0-293866aaec31|企業情報 - Treasure Data                              |
+
 
 ORDER BY節は，一連の「SELECT FROM」で抽出されたレコードに対して，結果を特定のカラム名の値で並び替える役割を果たします。その際，昇順か降順のどちらにするかは，ASCもしくはDESCオプションで指定できます。どちらのオプションも指定しない場合はASCになります。なお，LIMIT節と併用する場合には，ORDER BY節はその前にないといけません。
 
