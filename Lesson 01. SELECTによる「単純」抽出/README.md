@@ -27,3 +27,11 @@ FROM sample_accesslog
 |1466411214|7f47d05f-bd12-4553-e69c-763064738631|Fluentd Enterprise Edition Subscription - Treasure Data|
 |1466412594|eb0b1d7e-0ddc-4297-ab4d-7100fda959f2|トレジャーデータサービスが、 株式会社MonotaRO（モノタロウ）のデータ分析基盤として導入 - プレスリリース - Treasure Data|
 
+「SELECT」の直後に特定のカラム名を複数選ぶ（カンマで区切ることを忘れないでください）ことで，必要なカラムだけが選択された結果テーブルを抽出することができます。
+カンマが抜けてしまっていても，実はエラーが出ません。しかしながら，抜けているカンマより前にあるカラムが抽出されないことになります。長いクエリになるとこういった凡ミスが起こり得るので，日頃から注意しておきましょう。
+
+```sql
+SELECT time, td_client_id td_title --カンマが抜けてる！
+FROM sample_accesslog
+```
+
