@@ -10,6 +10,11 @@ FROM sample_accesslog
 WHERE td_client_id = 'f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a'
 LIMIT 10
 ```
+|td_client_id|time       |
+|------------|-----------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464572103 |
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464573326 |
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464570933 |
 
 WHEREの後に記述するものは「条件式」と呼ばれ，必ずTRUEまたはFALSEのどちらかを返す必要があります。条件式がNULLを返す場合にはそのレコードは参照されません（抽出されません）。
 
@@ -23,6 +28,11 @@ FROM sample_accesslog
 WHERE td_client_id <> 'f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a' --含まない
 LIMIT 10
 ```
+|td_client_id|time       |
+|------------|-----------|
+|32258bfe-444d-44fa-ad90-e71eea183008|1467187504 |
+|c48672da-1b44-46a0-ab9d-c24cdbe9f146|1467190495 |
+|3ee1cc12-5cc9-4b93-f1cb-31a4f3872d4e|1467187876 |
 
 ### 特定のtimeの値以上
 
@@ -32,6 +42,11 @@ FROM sample_accesslog
 WHERE time >= 1463640700 --time の値が 1463640700 以上
 LIMIT 10
 ```
+|td_client_id|time       |
+|------------|-----------|
+|411b1c21-3e98-4a1a-a6cd-f41aaf69a5dc|1464239250 |
+|2705c701-3b7c-4ef3-d88d-50529a3d1060|1466410889 |
+|228e28e6-1753-4e69-b35f-5362fc725ec5|1464239515 |
 
 ### 特定のtimeより小さい
 
@@ -41,6 +56,11 @@ FROM sample_accesslog
 WHERE time < 1463640700 -- time の値が 1463640700 より小さい
 LIMIT 10
 ```
+|td_client_id|time       |
+|------------|-----------|
+|c6c0c9cd-fd18-4c21-c795-5bca1ab63066|1462089548 |
+|bdd71c57-06cf-4572-f504-eceadbec4e91|1462089432 |
+|bdd71c57-06cf-4572-f504-eceadbec4e91|1462089362 |
 
 ## 複数の条件指定 [ WHERE A AND/OR/NOT B ]
 
@@ -56,6 +76,11 @@ AND time >= 1463640700
 ORDER BY time
 LIMIT 10
 ```
+|td_client_id|time       |
+|------------|-----------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640700 |
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640811 |
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1463640889 |
 
 比較演算子を複数つなげるには，論理演算子を使います。基本的な論理演算子のクエリ例をいくつか挙げていきます。
 
@@ -70,9 +95,13 @@ OR td_client_id = '780e865b-35f2-4e56-990a-5ed67cf733a3'
 ORDER BY time
 LIMIT 10
 ```
-複数のtd_client_idの値で絞り込みを行い場合は，ORをつなげていきます。
-　　　
-結果が確かに3種のtd_client_idしか含んでいないことを確認するために，以下のクエリを書きます。
+|td_client_id|time       |
+|------------|-----------|
+|780e865b-35f2-4e56-990a-5ed67cf733a3|1461348266 |
+|780e865b-35f2-4e56-990a-5ed67cf733a3|1461348343 |
+|780e865b-35f2-4e56-990a-5ed67cf733a3|1461348350 |
+
+複数のtd_client_idの値で絞り込みを行い場合は，ORをつなげていきます。結果が確かに3種のtd_client_idしか含んでいないことを確認するために，以下のクエリを書きます。
 
 このクエリは，まず内側のSELECT文で対象となるtd_client_idのレコードを絞り込み，外側のSELECT DISTINCT文でユニークなtd_client_idのリストを生成して列挙しています。
 
@@ -88,6 +117,12 @@ FROM
   OR td_client_id = '780e865b-35f2-4e56-990a-5ed67cf733a3'
 )
 ```
+|td_client_id|
+|------------|
+|f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|
+|7f47d05f-bd12-4553-e69c-763064738631|
+|780e865b-35f2-4e56-990a-5ed67cf733a3|
+
 
 ### td_client_idの特定の3ユーザーのみで，かつ特定のtimeより大きい
 
