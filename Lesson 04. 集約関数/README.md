@@ -25,6 +25,15 @@
 SELECT a
 FROM ( VALUES 0, 0, 1, 2, NULL, NULL ) AS t(a)
 ```
+|a         |
+|----------|
+|0         |
+|0         |
+|1         |
+|2         |
+|NULL      |
+|NULL      |
+
 
 上記のテーブルに対し、次のように様々な引数を持ったCOUNTを実行します。
 
@@ -79,6 +88,10 @@ FROM ( VALUES 0, 0, 1, 2, NULL, NULL ) AS t(a)
 SELECT COUNT(1) AS cnt
 FROM sales_slip
 ```
+|cnt       |
+|----------|
+|5892348   |
+
 
 上記のクエリは，sales_slipテーブルに存在する全レコードをカウントしていることになります。
 
@@ -108,6 +121,10 @@ FROM sales_slip
 SELECT COUNT(member_id) AS cnt
 FROM sales_slip
 ```
+|cnt       |
+|----------|
+|4372170   |
+
 
 先程より少ない件数が結果として得られました。これは，member_idがNULLであるレコードがカウントされていないからです。
 
@@ -118,6 +135,10 @@ SELECT COUNT(1) AS cnt
 FROM sales_slip
 WHERE member_id IS NOT NULL
 ```
+|cnt       |
+|----------|
+|4372170   |
+
 
 ## カラムの値によるグループごとのCOUNT [ GROUP BY ]
 
@@ -129,7 +150,14 @@ SELECT member_id
 FROM sales_slip
 GROUP BY member_id
 ORDER BY member_id
+LIMIT 3
 ```
+|member_id |
+|----------|
+|10000     |
+|100006    |
+|1000382   |
+
 
 この結果には，以下のクエリと同じく，ユニークなmember_idがリストアップされています。
 
@@ -137,12 +165,29 @@ ORDER BY member_id
 SELECT DISTINCT member_id
 FROM sales_slip
 ORDER BY member_id
+LIMIT 3
+```
+|member_id |
+|----------|
+|10000     |
+|100006    |
+|1000382   |
+
 GROUP BYの本領は，member_idごとに「集計」をさせられることです。
+
+```sql
 SELECT member_id, COUNT(1) AS cnt
 FROM sales_slip
 GROUP BY member_id
 ORDER BY cnt DESC
+LIMIT 3
 ```
+|member_id |cnt    |
+|----------|-------|
+|NULL      |1520178|
+|949366    |547570 |
+|2259091   |330460 |
+
 
 上記のクエリでは，結果を購入回数の多い順に並び替えています。GROUP BYにおいてはNULLを1つの値として扱っていることに注意してください。言い換えると，NULLの件数1,520,178件を他のmember_idと一緒に数えています。NULLを除外したい場合には「WHERE member_id IS NOT NULL」を加えます。WHERE節におけるIS NULLの追加の仕方については後述します。
 
@@ -179,6 +224,12 @@ GROUP BY member_id, category
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|NULL      |Automotive and Industrial|1520178|
+|949366    |Beauty and Health and Grocery|547557 |
+|2259091   |Automotive and Industrial|330459 |
+
 
 こちらのクエリでは，GROUP BYでmember_idごと，さらにcategoryごとに集計が行われると認識され，この2つの組合せにより同じ値のレコードが同じところに集められてきます。SELECT節では，きちんとその2つのディメンジョンが選択されているので，次の作業のCOUNTという集計命令が問題なく実行されて結果が出力されます。
 
@@ -196,6 +247,12 @@ WHERE member_id = '10000'
 GROUP BY member_id, category
 ORDER BY cnt DESC
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|10000     |Home and Garden and Tools|85     |
+|10000     |Sports and Outdoors|77     |
+|10000     |Electronics and Computers|67     |
+
 
 sales_slipのようなレコード数が多いテーブルでは，時間範囲指定のWHERE節（詳細は後述の章で説明）なしに全レコードを対象とする集計をかけると，とても時間がかかります。また，多くの場合，集計では1日や1ヶ月といった限定的な範囲のレコードしか用いません。クエリの実行時間が長くなる場合には，以下のように時間範囲指定のWHERE節を入れることがあります。
 
@@ -206,6 +263,11 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY member_id, category
 ORDER BY cnt DESC
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|NULL      |Automotive and Industrial|539750 |
+|1833816   |Electronics and Computers|245    |
+|1833816   |Home and Garden and Tools|199    |
 
 冒頭で示した2つの注意点のうち，「GROUP BYよりも先にWHEREが実行されること」は特に重要です。集計値に対して条件による絞り込みを行いたい場合がよくあるでしょう。例えば，「categoryでの購入回数が150を超えるmember_idとそのcategoryを取ってくる」という例を考えてみてください。以下のようなクエリが考えられますが，これではエラーになります。
 
@@ -234,6 +296,12 @@ WHERE 150 <= cnt
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|NULL      |Automotive and Industrial|539750 |
+|1833816   |Electronics and Computers|245    |
+|1833816   |Home and Garden and Tools|199    |
+
 
 結果は出力されましたが，NULLが上位になっているのが気になります。特定できるmember_idで抽出し直しましょう。NULLを除外するためのWHEREの位置に注目してください。
 
@@ -251,12 +319,19 @@ WHERE 150 <= cnt
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|1833816   |Electronics and Computers|245    |
+|1833816   |Home and Garden and Tools|199    |
+|949366    |Beauty and Health and Grocery|178    |
+
 
 このクエリはだいぶ長くなってしまいました。実は，集計においてはHAVINGという絞り込みが可能で，こちらを使うとよりシンプルな記述で目的を果たせます。
 
 ## HAVING節による集計値の条件でさらに絞り込む [ GROUP BY HAVING ]
 
 HAVING節は，WHEREと同じ条件絞り込みでも，GROUP BYの後に実行される挙動を示します。HAVING節の注意点は以下の2つです。
+
 - HAVING節はGROUP BY節の後に書くこと
 - GROUP BYよりも後にHAVINGが実行されること
 
@@ -272,6 +347,12 @@ HAVING 150 <= COUNT(1)
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|member_id |category|cnt    |
+|----------|--------|-------|
+|1833816   |Electronics and Computers|245    |
+|1833816   |Home and Garden and Tools|199    |
+|949366    |Beauty and Health and Grocery|178    |
+
 
 ここで少し頭を整理しましょう。今のクエリの実行順は次のように表せます。
 
@@ -298,6 +379,10 @@ SELECT
 FROM sales_slip
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|cnt       |cnt_omit_null|total_amount|
+|----------|-------------|------------|
+|1031573   |491823       |1093191     |
+
 
 上記のクエリでは，SUM(amount)で全レコードの購入点数合計を求めていますが，member_idがNULLのレコードの値も加算されています。member_idが特定されているレコードに限って合計を求めたい場合には，下記のようにしてNULLを除外します。
 
@@ -310,6 +395,10 @@ FROM sales_slip
 WHERE member_id IS NOT NULL
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|cnt       |cnt_omit_null|total_amount|
+|----------|-------------|------------|
+|491823    |491823       |553439      |
+
 
 各レコードについて（購入点数）×（価格）=（売上総額）となるので，NULLを除く全レコードの総売上額を求めるには以下のように書きます。SUM(amount * price)では，各レコードごとのamount * price値が足し合わされていきます。
 
@@ -319,6 +408,10 @@ FROM sales_slip
 WHERE member_id IS NOT NULL
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|cnt       |total_sales|
+|----------|-----------|
+|491823    |1473754425 |
+
 
 次に，member_idごとの購入回数（cnt），合計購入点数（total_amount），売上総額（total_sales）を一度に見てみましょう。売上の多い上位10件を取得します。ここではNULLが集計されている様子をあえて見てみます。
 
@@ -332,6 +425,12 @@ GROUP BY member_id
 ORDER BY total_sales DESC
 LIMIT 10
 ```
+|member_id |cnt    |total_amount|total_sales|
+|----------|-------|------------|-----------|
+|NULL      |539750 |539752      |161925600  |
+|1385684   |803    |1009        |9265322    |
+|1111523   |38     |38          |5916546    |
+
 
 ここで，売上総額を購入回数で割れば「1回の購入当たりの平均金額」，合計購入点数を購入回数で割れば「1点当たりの平均金額」を求めることができます。また，今度は NULLを除外します。さらに，SUM(amount)の値が0のmember_idがあれば0による除算が起こるので，そのmember_idに遭遇した時点でこのクエリはエラーを返し，結果を返してくれません。そこで，HAVING節でそのようなmember_idを除外しておきます。COUNT(1)については0を返すことがないので0除算を考慮する必要はありません。
 
@@ -350,8 +449,15 @@ HAVING 0 < SUM(amount)
 ORDER BY total_sales DESC
 LIMIT 10
 ```
+|member_id |cnt    |total_amount|total_sales|avg_sales_per_cnt|avg_sales_per_amount|
+|----------|-------|------------|-----------|-----------------|--------------------|
+|1385684   |803    |1009        |9265322    |11538            |9182                |
+|1111523   |38     |38          |5916546    |155698           |155698              |
+|1916325   |681    |1235        |4840029    |7107             |3919                |
+
 
 上記クエリでは結果を，total_salesで並び替えていますが，avg_sales_per_cntやavg_sales_per_amountで並び替えると，また違った世界が見えそうです。ここで上記クエリの次の部分に注目してください。
+
 ```sql
   SUM(amount * price) / COUNT(1)    AS avg_sales_per_cnt,
   SUM(amount * price) / SUM(amount) AS avg_sales_per_amount
@@ -363,6 +469,7 @@ LIMIT 10
   total_sales / cnt          AS avg_sales_per_cnt,
   total_sales / total_amount AS avg_sales_per_amount
 ```
+
 実は，同じSELECT節で新しく別名が割り振られたカラムの名前は，その外側のSELECT節で初めて利用できるようになります。そのため，上記のように書くと，そのような名前のカラムがないとエラーが出ます。同じ結果を返すためには次のようなクエリを書きます。
 
 ```sql
@@ -384,6 +491,12 @@ FROM
 ORDER BY total_sales DESC
 LIMIT 10
 ```
+|member_id |cnt    |total_amount|total_sales|avg_sales_per_cnt|avg_sales_per_amount|
+|----------|-------|------------|-----------|-----------------|--------------------|
+|1385684   |803    |1009        |9265322    |11538            |9182                |
+|1111523   |38     |38          |5916546    |155698           |155698              |
+|1916325   |681    |1235        |4840029    |7107             |3919                |
+
 
 ## AVGによる値の平均は注意深く
 
@@ -398,6 +511,10 @@ LIMIT 10
 SELECT AVG(a) AS avg1
 FROM ( VALUES 1, 1, 1, 1, 0, 0 ) AS t(a)
 ```
+|avg1      |
+|----------|
+|0.6666666666666666|
+
 
 結果は，4個の1と2個の0を足した4をレコード数の6で割った4/6の値です。ここで0の代わりにNULLが含まれるとどうなるでしょうか？
 
@@ -405,6 +522,10 @@ FROM ( VALUES 1, 1, 1, 1, 0, 0 ) AS t(a)
 SELECT AVG(a) AS avg2
 FROM ( VALUES 1, 1, 1, 1, NULL, NULL ) AS t(a)
 ```
+|avg2      |
+|----------|
+|1.0       |
+
 
 NULLの値はAVGの集計対象とならず，4個の1を足してレコード数の4で割った結果になりました。
 場合によってはNULLを0と同一視して扱いたいことがあります。SUM関数では気にしなくてよかったのですが，AVG関数ではNULLを気にする必要があります。同一視する場合には，予めNULLを0とみなす記述が必要です。
@@ -415,6 +536,9 @@ NULLの値はAVGの集計対象とならず，4個の1を足してレコード�
 SELECT AVG( COALESCE(a, 0) ) AS avg3
 FROM ( VALUES 1, 1, 1, 1, NULL, NULL ) AS t(a)
 ```
+|avg3      |
+|----------|
+|0.6666666666666666|
 
 AVGに関してもう1つ注意が必要なのは，「その他のディメンジョンでNULLが含まれる」ときです。sales_slipの例では，ディメンジョンmemebr_idにNULLが含まれており，集計対象のamountやpriceにはNULLが含まれていない場合がそれに該当します。ここでは，SUM関数の説明の後半で登場したavg_sales_per_cnt（1回の購入当たりの平均金額）をAVGにより簡潔に記述することでAVG関数の仕組みを理解しましょう。（ちなみに，1点当たりの平均金額を計算するavg_sales_per_amountのほうはAVGでは記述できません。）
 
@@ -428,6 +552,10 @@ SELECT
 FROM sales_slip
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|cnt       |avg_amount1       |avg_amount2       |avg_sales_per_cnt1|avg_sales_per_cnt2|
+|----------|------------------|------------------|------------------|------------------|
+|1031573   |1.0597320790675988|1.0597320790675988|1585.6173290692952|1585.6173290692952|
+
 
 上記の結果から類推できますように，AVG関数はその引数に指定されたカラムの値について，その合計をレコード件数で割った「1件当たり」の平均を求めます。AVG関数で暗黙にCOUNT関数も使われるということは，全体の平均を取るとき，あるカラム（今の例ではmember_id）に含まれるNULLを含むか否かで結果が変わることに注意してください。（NULLを含めると結果が間違っているという意味ではありません。NULLの扱い方の方針によってどちらが正しいかが決まります。）
 以下のクエリはmember_idのNULLを除外した集計結果になります。
@@ -441,6 +569,10 @@ FROM sales_slip
 WHERE member_id IS NOT NULL
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|cnt       |avg_amount3       |avg_sales_per_cnt3|
+|----------|------------------|------------------|
+|491823    |1.1252808429048662|2996.5138372951246|
+
 
 member_idがGROUP BYでディメンジョンに指定される場合，NULLはそれを1つの値として集約するので，集計値に影響が出ることはありません。NULLが必要ない場合には常に除外するという習慣をつけましょう。
 
@@ -457,6 +589,12 @@ AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY member_id
 LIMIT 10
 ```
+|member_id |cnt               |avg_amount1       |avg_amount2       |avg_sales_per_cnt1|avg_sales_per_cnt2|
+|----------|------------------|------------------|------------------|------------------|------------------|
+|487511    |53                |1.0943396226415094|1.0943396226415094|1900.1509433962265|1900.1509433962265|
+|680660    |41                |1.048780487804878 |1.048780487804878 |1913.7317073170732|1913.7317073170732|
+|860536    |144               |1.0486111111111112|1.0486111111111112|4146.208333333333 |4146.208333333333 |
+
 
 ## 時間をGROUP BYで扱う
 
@@ -476,6 +614,12 @@ GROUP BY TD_TIME_FORMAT(time, 'yyyy-MM-dd', 'JST')
 ORDER BY d DESC
 LIMIT 10
 ```
+|d         |total_sales       |
+|----------|------------------|
+|2011-12-31|2443847           |
+|2011-12-30|2053735           |
+|2011-12-29|1378928           |
+
 
 下記は，カテゴリごとに月次での売上を見るクエリです。
 
@@ -491,6 +635,12 @@ GROUP BY TD_TIME_FORMAT(time, 'yyyy-MM-01', 'JST'), category
 ORDER BY d DESC, category
 LIMIT 10
 ```
+|d         |category          |total_sales|
+|----------|------------------|-----------|
+|2011-12-01|Automotive and Industrial|13063147   |
+|2011-12-01|Beauty and Health and Grocery|14239962   |
+|2011-12-01|Books and Audible |7475593    |
+
 
 ## MAX，MINを扱う集計
 
@@ -510,6 +660,10 @@ FROM sales_slip
 WHERE member_id IS NOT NULL
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|max_price |min_price         |goods_id_max_price|goods_id_min_price|
+|----------|------------------|------------------|------------------|
+|379048    |1                 |469815            |508703            |
+
 
 price = 37,9048のgoods_id = 514206が最も高く，price = 1のgoods_id = 508703が最も安いことがわかりました。念のため，goods_idとpriceの関係が正しいか確認しておきます。
 
@@ -517,6 +671,19 @@ price = 37,9048のgoods_id = 514206が最も高く，price = 1のgoods_id = 5087
 SELECT DISTINCT category, sub_category, goods_id, price
 FROM sales_slip
 WHERE goods_id IN ('514206','508703')
+AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
+```
+|category  |sub_category      |goods_id|price |
+|----------|------------------|--------|------|
+|Clothing and Shoes and Jewelry|Baby              |508703  |1     |
+|Electronics and Computers|Computer Accessories and Peripherals|514206  |379048|
+
+もし，上記のクエリが「IN value and list items must be the same type: bigint」としてエラーが出る場合，goods_idのスキーマ（型設定）が整数型になっていることが考えられます。その場合には以下を実行してみてください。
+
+```sql
+SELECT DISTINCT category, sub_category, goods_id, price
+FROM sales_slip
+WHERE goods_id IN (514206,508703)
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
 
@@ -535,6 +702,12 @@ GROUP BY member_id
 ORDER BY max_price DESC
 LIMIT 10
 ```
+|member_id |max_price         |min_price|goods_id_max_price|goods_id_min_price|
+|----------|------------------|---------|------------------|------------------|
+|337826    |379048            |665      |532489            |525950            |
+|1385684   |379048            |96       |522981            |488745            |
+|1111523   |379048            |934      |500087            |512968            |
+
 
 下記のクエリは，member_idごとの2011年の購入履歴の最初と最新を，日付と値段を含めて調べる例です。
 
@@ -553,6 +726,12 @@ GROUP BY member_id
 ORDER BY last_access DESC
 LIMIT 10
 ```
+|member_id |last_access       |first_access|goods_id_last_access|goods_id_first_access|price_last_access|price_first_access|
+|----------|------------------|------------|--------------------|---------------------|-----------------|------------------|
+|1125245   |2011-12-31        |2011-04-06  |550495              |491404               |2839             |2553              |
+|1199431   |2011-12-31        |2011-01-18  |549802              |471821               |1990             |934               |
+|1458016   |2011-12-31        |2011-01-12  |550166              |471045               |952              |2860              |
+
 
 ## 最頻値
 
@@ -572,6 +751,10 @@ FROM
   GROUP BY price
 )
 ```
+|mode|mode_frequency|
+|----|--------------|
+|2839|48232         |
+
 
 この結果は，最も登場回数が多いのは price=2,839 のレコードで，48,232回登場することを示しています。
 
@@ -588,6 +771,10 @@ FROM
   GROUP BY price
 )
 ```
+|mode|mode_frequency|
+|----|--------------|
+|2839|51319         |
+
 
 この結果は，最も購入回数が多いのは price=2,839 のアイテムで，51,319点購入されていることを示しています。
 さらに発展として，最頻値ではなく最頻「アイテム」を特定してみましょう。
@@ -603,6 +790,10 @@ FROM
   GROUP BY goods_id
 )
 ```
+|mode_goods_id|mode_frequency|
+|-------------|--------------|
+|488745       |7059          |
+
 
 この結果は，最も購入回数が多いのは goods_id=48745 のアイテムで，7,059点購入されていることを示しています。
 最後に，member_idごとの最頻アイテムを求め，頻度が高いmember_idの上位10件の結果を出してみます。
@@ -621,6 +812,12 @@ GROUP BY member_id
 ORDER BY mode_frequency DESC
 LIMIT 10
 ```
+|member_id|mode_goods_id|mode_frequency|
+|---------|-------------|--------------|
+|7113     |488745       |338           |
+|1500132  |109601       |224           |
+|1348     |488745       |199           |
+
 
 ## BOOL_AND，BOOL_MIN
 
@@ -640,6 +837,12 @@ FROM
 )
 ORDER BY is_canceled_every DESC, is_canceled_any
 ```
+|member_id|is_canceled_any|is_canceled_every|
+|---------|---------------|-----------------|
+|949366   |true           |true             |
+|2259091  |true           |true             |
+|323685   |true           |false            |
+
 
 上位2名がキャンセルしかしていない人，残り1名がキャンセルをしたことがある人です。この3人のキャンセル率を見てみましょう。
 
@@ -651,6 +854,13 @@ WHERE member_id IN ('2259091','949366','323685')
 GROUP BY member_id
 ORDER BY cancel_ratio DESC
 ```
+|member_id|cancel_ratio|
+|---------|------------|
+|949366   |1.0         |
+|2259091  |1.0         |
+|323685   |0.007722007722007722|
+
+
 キャンセルしかしていない人のキャンセル率は100%であることが見てとれます。
 
 ## 中央値，パーセンタイル（近似）
@@ -670,6 +880,10 @@ FROM sales_slip
 WHERE member_id IS NOT NULL
 AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 ```
+|max_price|max_price2|per75_price |median|per25_price|min_price2|min_price|
+|---------|----------|------------|------|-----------|----------|---------|
+|379048   |379048    |2980        |2000  |1124       |15        |1        |
+
 
 APPROX_PERCENTILE(price, x)のxに0から1の間の割合を記述することで，中央値（x=0.5）およびxパーセンタイル（分位数）を求めることが可能です。上記のクエリでは代表的な4分位数を求めています。これらの結果はあくまで近似であることに注意してください。
 
