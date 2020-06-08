@@ -18,6 +18,16 @@ SELECT number,
   IF(number%2=1,'odd','even') AS number_type
 FROM numbers
 ```
+|number|number_type|
+|------|-----------|
+|1     |odd        |
+|2     |even       |
+|3     |odd        |
+|4     |even       |
+|5     |odd        |
+|6     |even       |
+|NULL  |even       |
+
 
 上記の結果に満足できない場合は，CASE文によってさらに多くの条件分岐ルートを設けることが可能です。「CASEの基本」で解決法を紹介します。
 
@@ -39,6 +49,11 @@ FROM
 )
 GROUP BY number_type
 ```
+|number_type|cnt  |
+|-----------|-----|
+|odd        |3    |
+|even       |3    |
+
 
 ### IFの結果を集計して横方向にテーブル出力
 
@@ -57,6 +72,10 @@ SELECT
   COUNT(number) AS num_total_wrong --NULLをカウントしない全件カウント
 FROM numbers
 ```
+|num_odd|num_even|num_null|num_total|num_even_wrong|num_total_wrong|
+|-------|--------|--------|---------|--------------|---------------|
+|3      |3       |1       |7        |7             |6              |
+
 
 ## CASEの基本
 
@@ -86,8 +105,45 @@ SELECT number,
   AS number_type
 FROM numbers
 ```
+|number|number_type|
+|------|-----------|
+|1     |odd        |
+|2     |even       |
+|3     |odd        |
+|4     |even       |
+|5     |odd        |
+|6     |even       |
+|NULL  |other      |
+
+ちなみに，ELSEを記述しなかった場合の，どの条件にもマッチしなかったNULLに対する結果は以下になります。
+```sql
+WITH numbers AS 
+( SELECT number FROM ( VALUES 1,2,3,4,5,6,NULL ) AS t(number) )
+
+SELECT number,
+  CASE number%2
+    WHEN 1 THEN 'odd'
+    WHEN 0 THEN 'even'
+    WHEN NULL THEN 'null'
+  END
+  AS number_type
+FROM numbers
+```
+|number|number_type|
+|------|-----------|
+|1     |odd        |
+|2     |even       |
+|3     |odd        |
+|4     |even       |
+|5     |odd        |
+|6     |even       |
+|NULL  |NULL       |
+
+
+
 
 NULLを捕捉するには，WHENの箇所に条件を丁寧に記述する以下の書き方を使います。WHENの1つひとつに条件式（それぞれ異なる条件式でもよい）を記述していく方式です。
+
 ```sql
 CASE
     WHEN condition THEN result
@@ -112,6 +168,16 @@ SELECT number,
   AS number_type
 FROM numbers
 ```
+|number|number_type|
+|------|-----------|
+|1     |odd        |
+|2     |even       |
+|3     |odd        |
+|4     |even       |
+|5     |odd        |
+|6     |even       |
+|NULL  |null       |
+
 
 ## CASEとセグメント
 
@@ -135,6 +201,12 @@ SELECT member_id, category, sales,
   END AS seg_sales
 FROM sales_table
 ```
+|member_id|category|sales|seg_sales|
+|---------|--------|-----|---------|
+|415086   |Books and Audible|2652 |Low      |
+|1227055  |Home and Garden and Tools|73738|Mid      |
+|1426403  |Home and Garden and Tools|47208|Mid      |
+
 
 CASEで作ったセグメントで集計する際は，セグメント名で並び替え可能になることを意識したほうが賢明でしょう。
 
@@ -162,6 +234,13 @@ FROM
 GROUP BY seg_sales
 ORDER BY seg_sales
 ```
+|seg_sales|cnt  |
+|---------|-----|
+|01_Low   |28620|
+|02_Mid   |41052|
+|03_High  |1167 |
+|04_Extreme|7    |
+
 
 ## CASEとFM分析
 CASEの応用として，sales_slipのユーザーをFrequency（購入頻度）とMonetary（購入総額）でそれぞれセグメント分けした後にクロステーブルとして出力するFM分析の例を紹介します。
@@ -201,6 +280,13 @@ FROM
 GROUP BY seg_monetary
 ORDER BY seg_monetary
 ```
+|seg_monetary|freq |freq_low|freq_mid|freq_high|freq_extreme|
+|------------|-----|--------|--------|---------|------------|
+|01_Low      |28620|16679   |11909   |32       |0           |
+|02_Mid      |41052|1446    |25014   |14588    |4           |
+|03_High     |1167 |14      |110     |1025     |18          |
+|04_Extreme  |7    |0       |2       |2        |3           |
+
 
 ## COALESCE
 
@@ -211,6 +297,10 @@ COALESCE関数は，第1引数で指定したカラムの値にNULLがあった�
 SELECT AVG(a) AS ag, COUNT(a) AS cnt, SUM(a) AS sm
 FROM ( VALUES 1, 1, 1, 1, NULL, NULL ) AS t(a)
 ```
+|ag  |cnt  |sm   |
+|----|-----|-----|
+|1.0 |4    |4    |
+
 
 目的を果たすには，COALESCE関数によって，NULLを0に変えてから集計する必要があります。
 
@@ -218,3 +308,7 @@ FROM ( VALUES 1, 1, 1, 1, NULL, NULL ) AS t(a)
 SELECT AVG(COALESCE(a, 0)) AS ag, COUNT(COALESCE(a, 0)) AS cnt, SUM(COALESCE(a, 0)) AS sm
 FROM ( VALUES 1, 1, 1, 1, NULL, NULL ) AS t(a)
 ```
+|ag  |cnt  |sm   |
+|----|-----|-----|
+|0.6666666666666666|6    |4    |
+
