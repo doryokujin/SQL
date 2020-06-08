@@ -4,7 +4,7 @@
 
 IFは集約関数の章でも利用しましたが，改めて説明します。
 
-```sql
+```sh
 IF(condition, true_value, false_value)
 ```
 
