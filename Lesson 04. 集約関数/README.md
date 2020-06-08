@@ -1,68 +1,34 @@
 # Lesson 04. 集約関数
 
-集約関数一覧
-関数名
-概要
-Return Type
-COUNT(*),
-COUNT(col),
-COUNT(expr), 
-COUNT(DISTINCT col)
-(*)：NULLを含む行の合計数を返します
-(1)：NULLを含む行の合計数を返します
-(col)：colの値がNULLでない行の合計数を返します
-(expr)：指定されている式の結果がNULLではない行の数を返します
-(DISTINCT col)：NULLでないユニークな行の合計数を数えます
+## 集約関数一覧
+|FIELD1    |FIELD2       |FIELD3     |
+|----------|-------------|-----------|
+|関数名       |概要           |Return Type|
+|COUNT(*), COUNT(col), COUNT(expr),  COUNT(DISTINCT col)|(*)：NULLを含む行の合計数を返します  (1)：NULLを含む行の合計数を返します  (col)：colの値がNULLでない行の合計数を返します  (expr)：指定されている式の結果がNULLではない行の数を返します  (DISTINCT col)：NULLでないユニークな行の合計数を数えます|BIGINT     |
+|SUM(col), SUM(expr), SUM(DISTINCT col)|(col)：グループ内の列の値の合計を返します  (expr)：指定されている式の結果がNULLか0ならば0が加算され，それ以外の数値ならばその値が加算されます  (DISTINCT col)：グループ内の列のユニークな値の合計を返します|DOUBLE     |
+|AVG(col),  AVG(expr), AVG(DISTINCT col)|(col)：グループ内の列の値の平均を返します。値がNULLの場合はスキップされ，行数（分母）にも加えられません。  (expr)：指定されている式の結果がNULLの場合はスキップされ，行数（分母）にも加えられません。それ以外の数値ならその値が加算され，行数（分母）も1でカウントされます  (DISTINCT col)：グループ内の列のユニークな値の平均を返します|DOUBLE     |
+|MIN(col)  |グループ内の列の最小値を返します|DOUBLE     |
+|MAX(col)  |グループ内の列の最大値を返します|DOUBLE     |
+|VARIANCE(col), VAR_POP(col)|グループ内の数値列の分散を返します|DOUBLE     |
+|VAR_SAMP(col)|グループ内の数値列のサンプル分散（不偏分散）を返します|DOUBLE     |
+|STDDEV_POP(col)|グループ内の数値列の標準偏差を返します|DOUBLE     |
+|STDDEV_SAMP(col)|グループ内の数値列のサンプル標準偏差を返します|DOUBLE     |
+|COVAR_POP(col1, col2)|グループ内の数値列のペアの母集団の共分散を返します|DOUBLE     |
+|COVAR_SAMP(col1, col2)|グループ内の数値列のペアのサンプル共分散を返します|DOUBLE     |
+|CORR(col1, col2|グループ内の数値列のペアの相関係数（Pearson係数）を返します|DOUBLE     |
 
-BIGINT
-SUM(col),
-SUM(expr), SUM(DISTINCT col)
-(col)：グループ内の列の値の合計を返します
-(expr)：指定されている式の結果がNULLか0ならば0が加算され，それ以外の数値ならばその値が加算されます
-(DISTINCT col)：グループ内の列のユニークな値の合計を返します
+## COUNTの挙動を理解する
 
-DOUBLE
-AVG(col), 
-AVG(expr),
-AVG(DISTINCT col)
-(col)：グループ内の列の値の平均を返します。値がNULLの場合はスキップされ，行数（分母）にも加えられません。
-(expr)：指定されている式の結果がNULLの場合はスキップされ，行数（分母）にも加えられません。それ以外の数値ならその値が加算され，行数（分母）も1でカウントされます
-(DISTINCT col)：グループ内の列のユニークな値の平均を返します
-
-DOUBLE
-MIN(col)
-グループ内の列の最小値を返します
-DOUBLE
-MAX(col)
-グループ内の列の最大値を返します
-DOUBLE
-VARIANCE(col), VAR_POP(col)
-グループ内の数値列の分散を返します
-DOUBLE
-VAR_SAMP(col)
-グループ内の数値列のサンプル分散（不偏分散）を返します
-DOUBLE
-STDDEV_POP(col)
-グループ内の数値列の標準偏差を返します
-DOUBLE
-STDDEV_SAMP(col)
-グループ内の数値列のサンプル標準偏差を返します
-DOUBLE
-COVAR_POP(col1, col2)
-グループ内の数値列のペアの母集団の共分散を返します
-DOUBLE
-COVAR_SAMP(col1, col2)
-グループ内の数値列のペアのサンプル共分散を返します
-DOUBLE
-CORR(col1, col2
-グループ内の数値列のペアの相関係数（Pearson係数）を返します
-DOUBLE
-COUNTの挙動を理解する
 （様々な条件で）行数を数えるCOUNT関数は，最もよく使われる集約関数の1つです。この最も基礎的な関数でさえ，NULLの扱い（有効として数えるか否か）が明確でない場合に適当な引数が使われて間違った結果をもたらしてしまう事例が絶えません。ここではCOUNTの正しい挙動を理解することで集約関数について理解を深めることにします。例として，次のクエリで生成したNULLを含む6件の数値からなるテーブルを使います。
+
+```sql
 SELECT a
 FROM ( VALUES 0, 0, 1, 2, NULL, NULL ) AS t(a)
+```
 
 上記のテーブルに対し、次のように様々な引数を持ったCOUNTを実行します。
+
+```sql
 SELECT 
   COUNT(*)     AS cnt_aster, 
   COUNT(0)     AS cnt_0, 
@@ -75,48 +41,38 @@ SELECT
   COUNT(IF(NULL,1,0))    AS cnt_if_null_0,
   COUNT(IF(NULL,1,NULL)) AS cnt_if_null_null
 FROM ( VALUES 0, 0, 1, 2, NULL, NULL ) AS t(a)
+```
+|cnt_aster |cnt_0        |cnt_1      |cnt_false|cnt_null|cnt_col|cnt_if_0|cnt_if_null|cnt_if_null_0|cnt_if_null_null|
+|----------|-------------|-----------|---------|--------|-------|--------|-----------|-------------|----------------|
+|6         |6            |6          |6        |0       |4      |6       |2          |6            |0               |
+
+
 上記の結果をまとめてみましょう。
-cnt_aster
-cnt_0
-cnt_1
-cnt_false
-cnt_null
-cnt_col
-cnt_if_0
-cnt_if_null
-cnt_if_null_0
-cnt_if_null_null
-6
-6
-6
-6
-0
-4
-6
-2
-6
-0
-引数がNULL以外の定数値（0，1，FALSE）および「*」の場合は，NULLを含む全レコード件数6を返す
-引数が常にNULLの場合は，すべてのレコードがスキップされ，レコード件数は0となる
-引数が特定のカラムを指定する場合には，そのカラム値がNULLでないレコード件数4を返す
-引数がIF式の場合，
-IF(a=0, 1, 0)は，aがNULLの場合は無条件でNULLを返し，この場合の式の返り値は偽値の0を返す
-aが0の場合の式の返り値は真値の1を返す
-aが0でなくNULLでない場合の返り値は偽値の0を返す
-IF(NULL, 1, 0)の条件式は無条件でNULLを返し，この場合の式の返り値は偽値の0を返す
-IF(NULL, 1, NULL)の条件式は無条件でNULLを返し，この場合の式の返り値は偽値のNULLを返す
-このIFの返り値を受けて，
-COUNT(NULL)の行は参照されない（スキップ）
-COUNT(1)およびCOUNT(0)の行は数えられる
-COUNT(IF(a=0, 1, 0))は，a=0の条件結果にかかわらずNULLを含む全件数6を返す
-COUNT(IF(a=0, 1, NULL))は，aが0である場合のみCOUNT(1)で，他はCOUNT(NULL)でスキップされるため，件数2を返す
-COUNT(IF(NULL, 1, 0))は，すべてのレコードでCOUNT(0)となるため，全件数6を返す
-COUNT(IF(NULL, 1, NULL))は，すべてのレコードでCOUNT(NULL)となるため，レコード件数は0となる
+
+- 引数がNULL以外の定数値（0，1，FALSE）および「*」の場合は，NULLを含む全レコード件数6を返す
+- 引数が常にNULLの場合は，すべてのレコードがスキップされ，レコード件数は0となる
+- 引数が特定のカラムを指定する場合には，そのカラム値がNULLでないレコード件数4を返す
+- 引数がIF式の場合，
+  - IF(a=0, 1, 0)は，aがNULLの場合は無条件でNULLを返し，この場合の式の返り値は偽値の0を返す
+  - aが0の場合の式の返り値は真値の1を返す
+  - aが0でなくNULLでない場合の返り値は偽値の0を返す
+  - IF(NULL, 1, 0)の条件式は無条件でNULLを返し，この場合の式の返り値は偽値の0を返す
+  - IF(NULL, 1, NULL)の条件式は無条件でNULLを返し，この場合の式の返り値は偽値のNULLを返す
+- このIFの返り値を受けて，
+  - COUNT(NULL)の行は参照されない（スキップ）
+  - COUNT(1)およびCOUNT(0)の行は数えられる
+- COUNT(IF(a=0, 1, 0))は，a=0の条件結果にかかわらずNULLを含む全件数6を返す
+- COUNT(IF(a=0, 1, NULL))は，aが0である場合のみCOUNT(1)で，他はCOUNT(NULL)でスキップされるため，件数2を返す
+- COUNT(IF(NULL, 1, 0))は，すべてのレコードでCOUNT(0)となるため，全件数6を返す
+- COUNT(IF(NULL, 1, NULL))は，すべてのレコードでCOUNT(NULL)となるため，レコード件数は0となる
+
 本テキスト全体では，次の3種のCOUNT引数を用途別に採用するものとします。
-NULLを含むレコードの件数：COUNT(1)
-特定のカラムでNULLを含まないレコードの件数：COUNT(a)（※カラムaがNULLを含む場合）
-条件を満たす場合はカウント，満たさない場合はカウントしない：COUNT( IF(expr, 1, NULL) ) （※exprは条件式）
-単純なユーザー数のカウント [ COUNT * ]
+
+- NULLを含むレコードの件数：COUNT(1)
+- 特定のカラムでNULLを含まないレコードの件数：COUNT(a)（※カラムaがNULLを含む場合）
+- 条件を満たす場合はカウント，満たさない場合はカウントしない：COUNT( IF(expr, 1, NULL) ) （※exprは条件式）
+
+## 単純なユーザー数のカウント [ COUNT * ]
 以降ではサンプルデータをもとにしてCOUNTの例を見ていきます。
 SELECT COUNT(1) AS cnt
 FROM sales_slip
