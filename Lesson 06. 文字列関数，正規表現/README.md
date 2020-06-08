@@ -252,45 +252,69 @@ FROM (
 'a.cd'
 ```
 マッチする文字列
+```sql
 abcd
 a1cd
 a_cd
+```
 マッチしない文字列
+```sql
 abbcd # a と cd の間に2文字以上ある
 abc   # d がない
 acd   # a と cd の間に0文字
+```
 確認クエリ
+```sql
 SELECT str, REGEXP_LIKE(str,'a.cd') AS is_matched
 FROM (
   VALUES 'abcd', 'a1cd', 'a_cd', 'abbcd', 'abc', 'acd'
 ) AS t(str)
+```
 
-数字が2文字目にくる4文字のパターン
+#### 数字が2文字目にくる4文字のパターン
+```sql
 'a[\d]cd', 'a[0-9]cd' 
+```
 マッチする文字列
+```sql
 a1cd
+```
 マッチしない文字列
+```sql
 abcd  # a と cd の間が数字でない
 a1c   # c の後に d がない
 a12cd # a と cd の間に2文字以上
+```
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_LIKE(str,'a[\d]cd')  AS is_matched, 
   REGEXP_LIKE(str,'a[0-9]cd') AS is_matched
 FROM (
   VALUES 'a1cd', 'abcd', 'a1c', 'a12cd'
 ) AS t(str)
+```
 
-数字以外の文字が2文字目にくる4文字のパターン
+#### 数字以外の文字が2文字目にくる4文字のパターン
+
+```sql
 'a[^\d]cd', 'a[\D]cd', 'a[^0-9]cd'
+```
+
 マッチする文字列
+```sql
 abcd
 a_cd
+```
+
 マッチしない文字列
+```sql
 a1cd  # a と cd の間が数字
 abbcd # a と cd の間に2文字以上ある
 acd   # a と cd の間に0文字
+```
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_LIKE(str,'a[^\d]cd')  AS is_matched, 
   REGEXP_LIKE(str,'a[\D]cd')   AS is_matched,
@@ -298,237 +322,392 @@ SELECT str,
 FROM (
   VALUES 'abcd', 'a_cd', 'a1cd', 'abbcd', 'acd'
 ) AS t(str)
+```
 
-数量子（1. 最長一致）
-構文
-Matches
-X?
-Xが1または0回
-X*
-Xが0回以上
-X+
-Xが1回以上
-X{n}
-Xがn回
-X{n,}
-Xがn回以上
-X{n,m}
-Xがn回以上，m回以下
+### 数量子（1. 最長一致）
+|構文  |Matches|
+|----|-------|
+|X?  |Xが1または0回|
+|X*  |Xが0回以上 |
+|X+  |Xが1回以上 |
+|X{n}|Xがn回   |
+|X{n,}|Xがn回以上 |
+|X{n,m}|Xがn回以上，m回以下|
+
 まずは「?」を含むパターンについて例を用いて検証していきましょう。
-bの0〜1回の繰り返しを挟むパターン
+
+#### bの0〜1回の繰り返しを挟むパターン
+
+```sql
 'ab?cd'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [acd]
 [abcd]
 [abcd][acd]
+```
+
 マッチしない文字列
+
+```sql
 abbcd   # b が2回以上
 abbbcd  # b が2回以上
 ab1cd   # a と cd の間に b と b 以外の文字がある
+```
+
 確認クエリ
+
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'ab?cd') AS matched
 FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
+```
 
-bcの0〜1回の繰り返しを挟むパターン
+#### bcの0〜1回の繰り返しを挟むパターン
+
 1文字の繰り返しでなく，文字列の繰り返しを記述するためには，繰り返したい文字列を「( )」で括って次のようにします。
+```sql
 'a(bc)?d'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [ad]     # (bc) は含まれなくてもよい
 [abcd]
+```
+
 マッチしない文字列
+
+```sql
 abd    # (bc) がない
 acd    # (bc) がない
 abce   # a(bc) の後が d でなく e
 abcexd # a(bc) と d の間の x が邪魔
 abcbce # (bc) が2回挟まっている
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'a(bc)?d') AS matched
 FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abce', 'abcxd', 'abcbcd'
 ) AS t(str)
+```
 
-bかcの0〜1回の繰り返しを挟むパターン
+#### bかcの0〜1回の繰り返しを挟むパターン
+
 複数の文字のいずれかの繰り返しを記述するためには，「[ ]」による文字クラスを使います。
+
+```sql
 'a[bc]?d'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 [ad]
 [abd]
 [acd]
 [abd]e
+```
 マッチしない文字列
+```sql
 abcd    # b か c が2回挟まっている
 abbd    # b か c が2回挟まっている
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'a[bc]?d') AS matched
 FROM (
   VALUES 'ad', 'abd', 'acd', 'acde', 'abcd', 'abbd'
 ) AS t(str)
+```
 
-0〜1回の数字の繰り返しを挟むパターン
+#### 0〜1回の数字の繰り返しを挟むパターン
+
 数字などの文字クラスも繰り返しの対象にできます。
+```sql
 'X[\d]?Y[\d]?'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [XY]
 [X1Y]
 [X1Y2]3
+```
+
 マッチしない文字列
+```sql
 X123Y # X と Y の間に数字が3回挟まっている
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'X[\d]?Y[\d]?') AS matched
 FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23'
 ) AS t(str)
+```
 
 ここまでは「?」を含むパターンの例を見てきました。ここからは，「*」（0回以上の繰り返し）を含むパターンについて例を使って検証していきます。
-bの0回以上の繰り返しを挟むパターン
+
+#### bの0回以上の繰り返しを挟むパターン
+```sql
 'ab*cd'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [acd]
 [abcd]
 [abcd][acd]
 [abbcd]
 [abbbcd]
+```
+
 マッチしない文字列
+
+```sql
 ab1cd   # a と cd の間に b と b 以外の文字がある
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'ab*cd') AS matched
 FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
+```
 
-bcの0回以上の繰り返しを挟むパターン
+#### bcの0回以上の繰り返しを挟むパターン
+
+```sql
 'a(bc)*d'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 [ad]     # (bc) は含まれなくてもよい
 [abcd]
 [abcbcd]
+```
+
 マッチしない文字列
+
+```sql
 abd    # (bc) がない
 acd    # (bc) がない
 abcxd  # a(bc) と d の間の x が邪魔
 abcbce # a(bc)(bc) の後が d でなく e
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'a(bc)*d') AS matched
 FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abcxd', 'abcbcd', 'abcbce'
 ) AS t(str)
+```
 
-bかcの0回以上の繰り返しを挟むパターン
+#### bかcの0回以上の繰り返しを挟むパターン
+```sql
 'a[bc]*d'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [ad]
 [abd]
 [acd]
 [abcd]
 [abcbbcd]
+```
+
 マッチしない文字列
+```sql
 abce    # d で終わらず e で終わっている
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'a[bc]*d') AS matched
 FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abcbbcd', 'abce'
 ) AS t(str)
+```
 
-数字の0回以上の繰り返しを挟むパターン
+#### 数字の0回以上の繰り返しを挟むパターン
+
+```sql
 'X[\d]*Y[\d]*'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [XY]
 [X1Y]
 [X1Y23]
 [X123Y]
+```
+
 マッチしない文字列
+
+```sql
 X12Z34Y # 12 と 34 の間に文字が挟まっている
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'X[\d]*Y[\d]*') AS matched
 FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23','X12Z34Y'
 ) AS t(str)
+```
 
 ここからは，「+」（1回以上の繰り返し）を含むパターンを例を用いて検証します。
-bの1回以上の繰り返しを挟むパターン
+
+#### bの1回以上の繰り返しを挟むパターン
+```sql
 'ab+cd'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [abcd]
 [abcd]acd
 [abbcd]
 [abbbcd]
+```
+
 マッチしない文字列
+
+```sql
 acd   # a と cd の間に b がない
 ab1cd # a と cd の間に b と b 以外の文字がある
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'ab+cd') AS matched
 FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
+```
 
-abの1回以上の繰り返しを挟むパターン
+#### abの1回以上の繰り返しを挟むパターン
+```sql
 '(ab)+cd'
+```
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 [abcd]   # (ab)cd
 [ababcd] # (ab)(ab)cd
+```
+
 マッチしない文字列
+```sql
 bcd     # (ab) ではなく b のみ
 abbcd   # (ab) と cd の間に (ab) でなく b のみ
 ababxcd # (ab)(ab) と cd の間の x が邪魔
+```
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'(ab)+cd') AS matched
 FROM (
   VALUES 'bcd', 'abcd', 'abbcd', 'ababcd', 'ababxcd'
 ) AS t(str)
+```
+#### bかcの1回以上の繰り返しを挟むパターン
 
-bかcの1回以上の繰り返しを挟むパターン
+```sql
 'a[bc]+d'
+```
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 [abd]
 [acd]
 [abcd]
 [abcbd]
+```
 マッチしない文字列
+
+```sql
 ad    # b か c が 1 回も挟まらない
 abce  # d で終わらず e で終わっている
+```
+
 確認クエリ
+
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'a[bc]+d') AS matched
 FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abce', 'abcbd'
 ) AS t(str)
+```
 
-数字の1回以上の繰り返しを挟まむパターン
+#### 数字の1回以上の繰り返しを挟まむパターン
+```sql
 'X[\d]+Y[\d]*'
+```
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 [X1Y]
 [X1Y23]
 [X123Y]
+```
 マッチしない文字列
+```sql
 XY      # 数字が1回も挟まっていない
 X12Z34Y # 12 と 34 の間に文字が挟まっている
+```
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'X[\d]+Y[\d]*') AS matched
 FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23','X12Z34Y'
 ) AS t(str)
+```
 
 ここからは，{n,m}（n回以上m回以下の繰り返し）を含むパターンについて例を用いて検証します。
-bに対する{n,m}の繰り返しを挟んだパターンの例
+
+#### bに対する{n,m}の繰り返しを挟んだパターンの例
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 'ab{3}cd'   # b が3回（ちょうど）含まれる ⇒ [abbbcd]
 'ab{1,}cd'  # b が1回以上含まれる ⇒ [abcd], [abcd]acd, [abbcd], [abbbcd]
 'ab{1,2}cd' # b が1回から2回含まれる ⇒ [abcd], [abcd]acd, [abbcd]
 'ab{0,2}cd' # b が0回から2回含まれる ⇒ [acd], [abcd], [abcd][acd], [abbcd]
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'ab{3}cd')   AS m1,
   REGEXP_EXTRACT_ALL(str,'ab{1,}cd')  AS m2,
@@ -537,14 +716,18 @@ SELECT str,
 FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
+```
 
-(ab)に対する{n,m}の繰り返しを挟んだパターンの例
+#### (ab)に対する{n,m}の繰り返しを挟んだパターンの例
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 '(ab){2}cd'   # (ab) が2回（ちょうど）含まれる ⇒ [(ab)(ab)cd]
 '(ab){1,}cd'  # (ab) が1回以上含まれる ⇒ [(ab)cd], [(ab)(ab)cd]
 '(ab){1,2}cd' # (ab) が1回から2回含まれる ⇒ [(ab)cd], [(ab)(ab)cd]
 '(ab){0,2}cd' # (ab) が0回から2回含まれる ⇒ a[cd], b[cd], [abcd], (ab)b[cd], ab1[cd]
+```
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'(ab){2}cd')   AS m1,
   REGEXP_EXTRACT_ALL(str,'(ab){1,}cd')  AS m2,
@@ -553,16 +736,23 @@ SELECT str,
 FROM (
   VALUES 'acd', 'bcd','abcd', 'abbcd', 'ababcd', 'ab1cd'
 ) AS t(str)
+```
 
-数字に対する{n,m}の繰り返しを挟んだパターンの例
+#### 数字に対する{n,m}の繰り返しを挟んだパターンの例
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 # 03-123-4567
 '[\d]{3}'   # ⇒ 03-[123]-[456]
 '[\d]{5}'   # ⇒ []
 '[\d]{1,}'  # ⇒ [03]-[123]-[4567]
 '[\d]{1,2}' # ⇒ [03]-[12][3]-[45][67]
 '[\d]{0,2}' # ⇒ [03]-[12][3]-[45][67]
+```
+
 確認クエリ
+
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'[\d]{3}')   AS m1,
   REGEXP_EXTRACT_ALL(str,'[\d]{5}')   AS m2,
@@ -572,42 +762,34 @@ SELECT str,
 FROM (
   VALUES '03-123-4567'
 ) AS t(str)
+```
 
-数量子（2. 控えめなものと強欲なもの）
+### 数量子（2. 控えめなものと強欲なもの）
 数量子には「控えめ」な数量子と「強欲」な数量子が存在します。普通の数量子との違いは，結果的にマッチする文字列をパターンの最小の範囲にとどめるか，パターンの最大の範囲まで取ってくるかにあります。
 控えめな数量子を以下に示します。
-構文
-Matches
-X??
-Xの1または0回の最短の繰り返し
-X*?
-Xの0回以上の最短の繰り返し
-X+?
-Xの1回以上の最短の繰り返し
-X{n}?
-Xのn回の最短の繰り返し
-X{n,}?
-Xのn回以上の最短の繰り返し
-X{n,m}?
-Xのn回以上，m回以下の最短の繰り返し
+|構文  |Matches|
+|----|-------|
+|X?? |Xの1または0回の最短の繰り返し|
+|X*? |Xの0回以上の最短の繰り返し|
+|X+? |Xの1回以上の最短の繰り返し|
+|X{n}?|Xのn回の最短の繰り返し|
+|X{n,}?|Xのn回以上の最短の繰り返し|
+|X{n,m}?|Xのn回以上，m回以下の最短の繰り返し|
+
 強欲な数量子を以下に示します。
-構文
-Matches
-X?+
-Xの1または0回の最大の繰り返し
-X*+
-Xの0回以上の最大の繰り返し
-X++
-Xの1回以上の最大の繰り返し
-X{n}+
-Xのn回の最大の繰り返し
-X{n,}+
-Xのn回以上の最大の繰り返し
-X{n,m}+
-Xのn回以上，m回以下の最大の繰り返し
+|構文  |Matches|
+|----|-------|
+|X?+ |Xの1または0回の最大の繰り返し|
+|X*+ |Xの0回以上の最大の繰り返し|
+|X++ |Xの1回以上の最大の繰り返し|
+|X{n}+|Xのn回の最大の繰り返し|
+|X{n,}+|Xのn回以上の最大の繰り返し|
+|X{n,m}+|Xのn回以上，m回以下の最大の繰り返し|
+
 多くの場合，普通の繰り返しは強欲な繰り返しと結果が同じになります。一方，控えめな一致では常に最短の文字列にしかマッチしなくなるので，意識して使い分けるシーンが出てきます。ここでは，普通の繰り返し，控えめな繰り返し，強欲な繰り返しのそれぞれのパターンの例を検証します。
 bに対する3種類の繰り返しを行うパターンの例
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 # acd
 'ab+'  # ⇒ []
 'ab+?' # ⇒ []
@@ -646,7 +828,10 @@ bに対する3種類の繰り返しを行うパターンの例
 'ab?'  # ⇒ [ab] 1回
 'ab??' # ⇒ [a]  0回
 'ab?+' # ⇒ [ab] 1回
+```
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'ab+')  AS m1,       --普通
   REGEXP_EXTRACT_ALL(str,'ab+?') AS m1_short, --最短
@@ -662,9 +847,13 @@ SELECT str,
 FROM (
   VALUES 'acd', 'abcd', 'abbcd', 'abbbcd'
 ) AS t(str)
+```
 
-数字の3種類の繰り返しに対応したパターンの例
+#### 数字の3種類の繰り返しに対応したパターンの例
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 # 03-123-4567
 '[\d]+'   # ⇒ [03]-[123]-[4567]
 '[\d]+?'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
@@ -677,7 +866,11 @@ FROM (
 '[\d]?'   # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
 '[\d]??'  # ⇒ []
 '[\d]?+'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
+```
+
 確認クエリ（結果は省略）
+
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'[\d]+')  AS m1,
   REGEXP_EXTRACT_ALL(str,'[\d]+?') AS m1_short,
@@ -693,8 +886,13 @@ SELECT str,
 FROM (
   VALUES '03-123-4567'
 ) AS t(str)
-数字とハイフンの3種類の繰り返しに対応したパターンの例
+```
+
+#### 数字とハイフンの3種類の繰り返しに対応したパターンの例
+
 マッチする文字列（「[ ]」はマッチする部分を示す）
+
+```sql
 # 03-123-4567
 '[\d-]+'   # ⇒ [03-123-456]
 '[\d-]+?'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
@@ -707,7 +905,10 @@ FROM (
 '[\d-]?'   # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
 '[\d-]??'  # ⇒ []
 '[\d-]?+'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
+```
+
 確認クエリ（結果は省略）
+```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'[\d-]+')  AS m1,
   REGEXP_EXTRACT_ALL(str,'[\d-]+?') AS m1_short,
@@ -723,37 +924,37 @@ SELECT str,
 FROM (
   VALUES '03-123-4567'
 ) AS t(str)
-境界正規表現エンジン
+```
+
+### 境界正規表現エンジン
 「境界正規表現エンジン」は，文字列の先頭や末尾などの「境界」を指示するための記号です。境界正規表現エンジンが使われたパターンでは，「〜を含む」だけでなく，「〜から始まる」や「〜で終わる」といった柔軟な記述が可能になります。
 境界正規表現エンジンには多くの種類がありますが，^および$以外の使用頻度は少なめです。
-構文
-Matches
-^
-行の先頭
-$
-行の末尾
-\b
-単語境界
-\B
-非単語境界
-\A
-入力の先頭
-\G
-前回のマッチの末尾
-\Z
-最後の行末記号がある場合は，それを除く入力の末尾
-\z
-入力の末尾（行末文字があれば，それが末尾）
-境界正規表現エンジンを含むパターン例
+|構文  |Matches|
+|----|-------|
+|^   |行の先頭   |
+|$   |行の末尾   |
+|\b  |単語境界   |
+|\B  |非単語境界  |
+|\A  |入力の先頭  |
+|\G  |前回のマッチの末尾|
+|\Z  |最後の行末記号がある場合は，それを除く入力の末尾|
+|\z  |入力の末尾（行末文字があれば，それが末尾）|
+
+#### 境界正規表現エンジンを含むパターン例
 マッチする文字列（「[ ]」はマッチする部分を示す）
+```sql
 # abc, abcxyz, xyzabc, xabcx, abc\n
 'abc'     # ⇒ [abc], [abc]xyz, xyz[abc], x[abc]x, [abc]\n
 '^abc'    # ⇒ [abc], [abc]xyz,                    [abc]\n
 'abc$'    # ⇒ [abc],           xyz[abc],          [abc]\n
 '^abc$'   # ⇒ [abc],                              [abc]\n
 '^abc\n$' # ⇒                                     [abc]\n
+```
+
 上記の例で注意してほしいのは，改行コードを含む「abc\n」という文字列に「'^abc$'」というパターンがマッチすることです。改行コードより後ろの部分は次の行のため，最初の行の末尾はcとなることから，「'^abc$'」というパターンにマッチします。
+
 確認クエリ
+```sql
 SELECT str, 
   REGEXP_LIKE(str,'abc')     AS is_m1,
   REGEXP_LIKE(str,'^abc')    AS is_m2,
@@ -764,36 +965,22 @@ FROM (
   VALUES 'abc', 'abcxyz', 'xyzabc', 'xabcx',
          'abc' || CHR(10) --ラインフィード (LF)
 ) AS t(str)
+```
 
-よく遭遇するパターン例
+#### よく遭遇するパターン例
 最後に，よく目にするであろう正規表現のパターンを一覧にして少しだけまとめておきます。
 頻出するマッチさせたい文字列
-例
-正規表現
-半角数値のみで構成されている，
-もしくは空白
-123456789
-^[0-9]*$
-英字小文字のみで構成されている，もしくは空白
-abcdefg
-^[a-z]*$
-英字大文字のみで構成されている，もしくは空白
-ABCDEFG
-^[A-Z]*$
-英字小文字大文字のみで構成されている，もしくは空白
-ABCdefg
-^[a-zA-Z]*$
-英数字のみで構成されている，
-もしくは空白
-12aaAA
-^[0-9a-zA-Z]*$
-郵便番号
-123-1234
-^[0-9]{3}-[0-9]{4}$
-日付（yyyy/M/d形式）
-2009/7/29
-^[0-9]{4}/[01]?[0-9]/[0123]?[0-9]$
+|頻出するマッチさせたい文字列|例    |正規表現                              |
+|--------------|-----|----------------------------------|
+|半角数値のみで構成されている， もしくは空白|123456789|^[0-9]*$                          |
+|英字小文字のみで構成されている，もしくは空白|abcdefg|^[a-z]*$                          |
+|英字大文字のみで構成されている，もしくは空白|ABCDEFG|^[A-Z]*$                          |
+|英字小文字大文字のみで構成されている，もしくは空白|ABCdefg|^[a-zA-Z]*$                       |
+|英数字のみで構成されている， もしくは空白|12aaAA|^[0-9a-zA-Z]*$                    |
+|郵便番号          |123-1234|^[0-9]{3}-[0-9]{4}$               |
+|日付（yyyy/M/d形式）|2009/7/29|^[0-9]{4}/[01]?[0-9]/[0123]?[0-9]$|
 
+```sql
 SELECT
  REGEXP_EXTRACT_ALL('123456789', '^[0-9]*$') AS m1,
  REGEXP_EXTRACT_ALL('abcdefg', '^[a-z]*$') AS m2,
@@ -802,23 +989,33 @@ SELECT
  REGEXP_EXTRACT_ALL('12aaAA', '^[0-9a-zA-Z]*$') AS m5,
  REGEXP_EXTRACT_ALL('123-1234', '^[0-9]{3}-[0-9]{4}$') AS m6,
  REGEXP_EXTRACT_ALL('2009/7/29', '^[0-9]{4}/[01]?[0-9]/[0123]?[0-9]$') AS m7
+```
 
-正規表現で文字列を抽出する
+## 正規表現で文字列を抽出する
+
 正規表現で文字列を抽出したい場合にはREGEXP_EXTRACT関数を使います。
+
 REGEXP_EXTRACTは，正規表現で記述されたパターンに対するマッチを試みて，マッチすれば最初のマッチストリングを返し，マッチしなければNULLを返す関数です。
 REGEXP_EXTRACT(string, pattern)のように使い，patternに正規表現のパターンを表す文字列を指定します。返り値は，一番はじめにマッチした部分文字列です。
 引数をもう1つ指定してREGEXP_EXTRACT(string, pattern, group)とした場合は，patternに正規表現のパターン文字列を，groupに何番目のグループのマッチストリングを返すかの数値（1から開始）を指定します。
+
 REGEXP_EXTRACT(string, pattern, group)を使う場合は，正規表現を1つのグループごとに必ず「( )」で囲みます。patternの中で「( )」を1つも使っていない場合は，0 Groupsエラーが出ます。
-特定の文字列を含み，最初にマッチした文字列を返す
+
+### 特定の文字列を含み，最初にマッチした文字列を返す
 REGEXP_EXTRACT(string, pattern)を使って，「td_urlが'fluentd.org'を含むかどうか」を調べるクエリを書いてみましょう。
+```sql
 SELECT td_url, REGEXP_EXTRACT(td_url,'fluentd.org') AS match_str
 FROM sample_accesslog_fluentd
 LIMIT 10
+```
 
-いずれかの文字列を含む文字列で最初にマッチしたものを返す
+### いずれかの文字列を含む文字列で最初にマッチしたものを返す
 正規表現では，「|」で区切って複数の文字列を並べることにより，そのいずれかにマッチするかどうかを調べることができます。これにより，URLの最後が以下のいずれかのグループにマッチするものだけを抽出するクエリを書いてみましょう。
+```sql
 (out_splunk$|out_file$|out_forward$|out_secure_forward$|out_exec$|out_exec_filter$|out_copy$)
+```
 「$」は行末を表す境界正規表現エンジンです。例えば，「out_splunk$」は「hoge/out_splunk」にはマッチしますが「out_splunk/hoge」にはマッチしません。
+```sql
 SELECT td_url, match_str1, match_str2
 FROM
 (
@@ -829,21 +1026,27 @@ FROM
 )
 WHERE match_str1 IS NOT NULL OR match_str2 IS NOT NULL
 LIMIT 10
-
+```
 上記のパターンは「(out_.*$)」と非常に簡単に記述できます。このパターンであれば他のoutを含む文字列を逃すこともありません。
+
 なお，マッチしない文字列を除外したい場合にはREGEXP_LIKEという関数が使えますが，この関数については後述します。ここでは，PrestoではREGEXP_EXTRACTでマッチしなかった場合にNULLが返ることを利用して，WHERE節でNULLを除外するSELECT節により外側から包んでいます。ただし，REGEXP_EXTRACTでマッチしなかった場合の返り値はプラットフォームにより異なるので（例えばHiveでは空文字が返ります），マッチしない場合にFALSEを返す後述の判定関数REGEXP_LIKEを使うことを強くお薦めします。
-特定の文字列を含む任意のグループを取り出す
+
+### 特定の文字列を含む任意のグループを取り出す
 td_urlが「docs.fluentd.org」を含むかどうかを見るクエリを書いてみましょう。LISTでなく文字列を返すように，REGEXP_EXTRACT(string, pattern, group)を使います。
 まず，patternを「docs.fluentd.org」ではなく「(docs.fluentd.org)」と書きます。これにより，(docs.fluentd.org)が1つのグループとして扱われます。このグループにマッチする文字列が複数登場する場合には，group番目にマッチした部分文字列が（LISTではなく）文字列として返されます。パターンに1つも「( )」によるグループがないと，0 Groupsエラー（マッチさせられない）が出ます。
 以下のクエリでは，最初（group=1）のマッチストリングを返すように記述しています。
+```sql
 SELECT td_url, REGEXP_EXTRACT(td_url,'(docs.fluentd.org)',1) AS match_str
 FROM sample_accesslog_fluentd
 LIMIT 10
+```
 
 繰り返しになりますが，マッチしなかった場合のREGEXP_EXTRACTの返り値は，PrestoではNULLですが，Hiveでは空文字です。挙動が異なるので注意しましょう。
-複数のグループを記述する
+
+### 複数のグループを記述する
 td_urlが「docs.fluentd.org」を含み，かつその後ろに「out_file」が含まれるものを直接抽出することを考えてみましょう。
 この場合，patternは「(docs.fluentd.org).*(out_file)」と書きます。グループ間の「.*」は，「その部分に何らかの文字が入る（文字がなくてもよい）」という意味です。「( )」を使わずに「docs.fluentd.org.*out_file」とした場合との違いは，「( )」を使うと1番目のグループに最初にマッチした部分文字列，2番目のグループに次にマッチした文字列を直接取り出せるのに対し，「( )」を使わないとマッチした全体しか返せないことです。
+```sql
 WITH 
 sample AS
 ( 
@@ -860,15 +1063,23 @@ SELECT
   s, REGEXP_EXTRACT(s,'(docs.fluentd.org).*(out_file)',1) AS match_str1,
      REGEXP_EXTRACT(s,'(docs.fluentd.org).*(out_file)',2) AS match_str2
 FROM sample
+```
 
 上記では以下のケースを試しています。
+
+```sql
 OK：https://docs.fluentd.org/v0.12/articles/out_file
 NG：https://docs.fluentd.org/v0.12/articles/out_forward （2番目のグループを含まない）
 NG：https://www.fluentd.org/v0.12/articles/out_file （1番目のグループを含まない）
 NG：out_file/article/docs.fluentd.org/ （グループの出現順序が異なる）
+```
+
 なお，groupの値を1から2に変えると，マッチする場合の返り値は変わりますが，マッチしない場合の結果はNULLで変わりません。
-いずれかのグループにマッチさせる
+
+### いずれかのグループにマッチさせる
 「(docs.fluentd.org|out_file)」というパターンは，「docs.fluentd.orgまたはout_file」の意味になり，どちらか片方にマッチすればよいことになります。順番が違っていても問題ありません。両方マッチした場合の返り値は，先にマッチしたほうの値です。
+
+```sql
 WITH 
 sample AS
 ( 
@@ -884,9 +1095,10 @@ sample AS
 SELECT
   s, REGEXP_EXTRACT(s,'(docs.fluentd.org|out_file)',1) AS match_str
 FROM sample
-
-マッチした文字列をすべて取り出す
+```
+### マッチした文字列をすべて取り出す
 REGEXP_EXTRACT_ALLは，マッチした文字列をarrayの返り値としてすべて取り出します。この関数ではグループを意識してもあまり意味がありません。
+```sql
 WITH 
 sample AS
 ( 
@@ -903,26 +1115,32 @@ SELECT
   s, REGEXP_EXTRACT_ALL(s,'docs.fluentd.org.*out_file') AS match_strs1,
      REGEXP_EXTRACT_ALL(s,'docs.fluentd.org|out_file') AS match_strs2
 FROM sample
+```
 
-メタ文字をエスケープしてマッチさせる
-パターンを記述するために記号として使われるメタ文字（\ * + . ? { } ( ) [ ] ^ $ - | ）自身を文字としてマッチさせるにはどうしたらよいでしょうか？ その場合は，それぞれのメタ文字の前にエスケープ「\」を1つ置くことで，単なる文字とみなされるようにします。
+### メタ文字をエスケープしてマッチさせる
+パターンを記述するために記号として使われるメタ文字```（\ * + . ? { } ( ) [ ] ^ $ - | ）```自身を文字としてマッチさせるにはどうしたらよいでしょうか？ その場合は，それぞれのメタ文字の前にエスケープ「\」を1つ置くことで，単なる文字とみなされるようにします。
 複雑な例として，メタ文字のような文字列「^\\(.+*?)[|]$」をマッチさせてみましょう。ただし，以下の例はPrestoのみで実行でき，Hiveでは実行できません（Hiveでどう書けばよいかは模索中です…）。
-1. 文字列全体「^\\(.+*?)[|]$」をマッチさせる
+1. 文字列全体```「^\\(.+*?)[|]$」```をマッチさせる
 すべてのメタ文字にエスケープを丁寧に付けます（1つでも付け忘れると意図しない結果になります）。
+```sql
 SELECT 
   REGEXP_EXTRACT(
     '^\\(.+*?)[|]$',
     '\^\\\\\(\.\+\*\?\)\[\|\]\$'
 )
-2. 「(.+*?)」で取り出す
+```
+2. ```「(.+*?)」```で取り出す
 両端の「(」と「)」はエスケープする必要がありますが，その間に続く文字は内容を気にせず「.*」と書いてマッチさせられます。
+```sql
 SELECT 
   REGEXP_EXTRACT(
     '^\\(.+*?)[|]$',
     '\(.*\)'
 )
-3. 「(.+*?)」と「[|]」を，それぞれGROUP1，GROUP2としてマッチさせる
+```
+3. ```「(.+*?)」```と```「[|]」```を，それぞれGROUP1，GROUP2としてマッチさせる
 それぞれを取り出すためのパターンの外側に括弧「( )」を付けます。
+```sql
 SELECT 
   REGEXP_EXTRACT(
     '^\\(.+*?)[|]$',
@@ -934,38 +1152,50 @@ SELECT
     '(\(.*\))(\[.*\])',
     2
   ) AS group2
-正規表現で文字列を条件判定する
+```
+
+## 正規表現で文字列を条件判定する
 REGEXP_LIKEは，正規表現で記述されたパターンにマッチするか否かを試し，マッチすればTRUEを，マッチしなければFALSEを返す関数です。REGEXP_EXTRACT関数と違ってマッチした部分文字列は返しませんが，条件判定で正しく利用することができます。この関数は，主に特定の正規表現にマッチする文字列を含んだレコードのみを抽出したい場合に，WHERE節とともに使います。
-特定の文字列を含むか否か
+
+### 特定の文字列を含むか否か
+```sql
 SELECT td_url
 FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'docs.fluentd.org')
 LIMIT 10
+```
 
-正規表現で文字列を置換する
+## 正規表現で文字列を置換する
 REGEXP_REPLACEは，正規表現によって記述されたパターンにマッチした部分を別の文字列で置換する関数です。マッチしなかった場合には何もせず元の文字列を返します。
-文字列の除去
+
+### 文字列の除去
+
 以下のクエリは，REGEXP_REPLACEを使って特定のパターンにマッチする文字列を除去する最も簡単な例です。空文字「''」を置換文字として指定しています。
+
+```sql
 SELECT td_url,
   REGEXP_REPLACE(td_url,'http(.)*://','') AS replaced_url
 FROM sample_accesslog_fluentd
 LIMIT 10
-
+```
 さらに，複数のパターンを「|」で列挙することで，それらを一度に変換することができます。
+```sql
 SELECT td_url,
   -- 'http(s)://' を除外 | '?'以降のパラメータを除外 | レコードの末尾の '/' を除外
   REGEXP_REPLACE(td_url,'http(.)*://|\?(.)*|/$','') AS replaced_url
 FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'\?')
 LIMIT 10
-
+```
 なお，文字列の中でパターンが複数回マッチする場合には，そのすべての箇所が置換されることになります。下記のクエリでは，td_urlの「/」という文字がすべて「@」に置換されます。
+```sql
 SELECT td_url,
   REGEXP_REPLACE(td_url,'/','@') AS replaced_url
 FROM sample_accesslog_fluentd
 LIMIT 10
-
+```
 マッチする文字列の一部を，置換後の文字列で再利用したい場合には，「$N」（Nはグループ番号）を使います。グループの概念を使うので，パターンのうち再利用したい部分を「( )」で囲みます。
+```sql
 SELECT td_url,
   --'http' と 'docs.fluentd.org' を入れ替え | で区切る
   -- $1=http, $2=://, $3=docs.fluentd.org --
@@ -973,11 +1203,14 @@ SELECT td_url,
 FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'docs.fluentd.org')
 LIMIT 10
+```
 
-
-正規表現で文字列を分割する
+## 正規表現で文字列を分割する
 REGEXP_SPLITは，正規表現のパターンによって文字列を分割する関数です。
+
+```sql
 SELECT td_url,
   REGEXP_SPLIT(td_url,'/') AS splitted_strs
 FROM sample_accesslog_fluentd
 LIMIT 10
+```
