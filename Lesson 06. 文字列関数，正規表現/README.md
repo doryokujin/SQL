@@ -1,13 +1,22 @@
 # Lesson 06. 文字列関数，正規表現
 
 ## 文字列の情報を得る関数
+
+### LENGTH(string) → bigint：文字列の長さを取得する
+
 ```sql
-LENGTH(string) → bigint：文字列の長さを取得する
 SELECT s, LENGTH(s) AS num_of_digits
 FROM (
   VALUES '1','10','100','1000'
 ) AS t(s)
 ```
+|s   |num_of_digits|
+|----|-------------|
+|1   |1            |
+|10  |2            |
+|100 |3            |
+|1000|4            |
+
 
 ### CHR(n) → varchar：改行コードやタブを文字列に加える
 nで指定した文字コード番号に対応する文字を返します。この関数は，改行文字など，クエリ内で直接記述できない文字を入力するために主に使用されます。
@@ -26,6 +35,10 @@ nで指定した文字コード番号に対応する文字を返します。こ�
 -- I have an 'apple'.
 SELECT 'I'||CHR(32)||CHR(32)||'have'||CHR(32)||'a'||CHR(32)||CHR(39)||'pen'||CHR(39)||'.'||CHR(10)||'I'||CHR(32)||'have'||CHR(32)||'an'||CHR(32)||CHR(39)||'apple'||CHR(39) ||'.' AS pico
 ```
+|pico|
+|----|
+|I  have a 'pen'. I have an 'apple'.|
+
 
 ### POSITION(substring IN string)，STRPOS(string, substring) → bigint：部分文字列の登場位置を調べる
 
@@ -34,6 +47,11 @@ SELECT 'I'||CHR(32)||CHR(32)||'have'||CHR(32)||'a'||CHR(32)||CHR(39)||'pen'||CHR
 ```sql
 SELECT POSITION('pen' IN 'I have a pen') AS pos1, STRPOS('I have a pen', 'pen') AS pos2, STRPOS('pen', 'I have a pen') AS pos_wrong
 ```
+|pos1|pos2|pos_wrong|
+|----|----|---------|
+|10  |10  |0        |
+
+
 ### LEVENSHTEIN_DISTANCE(string1, string2)，HAMMING_DISTANCE(string1, string2) → bigint：2つの文字列の類似度を数値化する
 
 HAMMING_DISTANCEは，文字数が等しい2つの文字列の中で，対応する位置にある異なる文字の個数を返します。この個数は主に2進数の比較に用いられます。
@@ -41,6 +59,10 @@ HAMMING_DISTANCEは，文字数が等しい2つの文字列の中で，対応す
 ```sql
 SELECT HAMMING_DISTANCE('1111111','1010101') AS dist_ham1, HAMMING_DISTANCE('lunch','punch') AS dist_ham2
 ```
+|dist_ham1|dist_ham2|
+|---------|---------|
+|3        |1        |
+
 
 文字数が異なる文字列を比較する場合や，文字の比較だけではなく挿入や削除が求められる場合には，より一般化されたLEVENSHTEIN_DISTANCEが使えます。
 
@@ -48,6 +70,10 @@ SELECT HAMMING_DISTANCE('1111111','1010101') AS dist_ham1, HAMMING_DISTANCE('lun
 SELECT LEVENSHTEIN_DISTANCE(    'apple', 'pineapple') AS dist_lev1,
        LEVENSHTEIN_DISTANCE('pineapple',  'applepen') AS dist_lev2
 ```
+|dist_lev1|dist_lev2|
+|---------|---------|
+|4        |7        |
+
 
 ## 文字列を整形する関数
 
@@ -69,6 +95,10 @@ FROM ( VALUES CHR(9)||' Pine Apple '||CHR(10)) AS t(s)
 SELECT LOWER(s) AS lower_str, UPPER(s) AS upper_str
 FROM ( VALUES 'PineApple') AS t(s)
 ```
+|lower_str|upper_str|
+|---------|---------|
+|pineapple|PINEAPPLE|
+
 
 ## 文字列を加工する関数
 
@@ -86,6 +116,13 @@ FROM (
     ('D', 'd', '4')
 ) AS t(s1,s2,s3)
 ```
+|s1  |s2 |s3 |concat_str1|concat_str2|
+|----|---|---|-----------|-----------|
+|A   |a  |1  |A_a_1      |A_a_1      |
+|B   |b  |2  |B_b_2      |B_b_2      |
+|C   |c  |3  |C_c_3      |C_c_3      |
+|D   |d  |4  |D_d_4      |D_d_4      |
+
 
 ### SUBSTR(string, start, length) → varchar：部分文字列を抜き出す
 
@@ -105,6 +142,17 @@ FROM (
     'Windows XP'
 ) AS t(s)
 ```
+|s   |os |version|
+|----|---|-------|
+|Windows|Windows|       |
+|Windows 7|Windows|7      |
+|Windows 8|Windows|8      |
+|Windows 8.1|Windows|8.1    |
+|Windows Phone|Windows|Phone  |
+|Windows RT 8.1|Windows|RT 8.1 |
+|Windows Vista|Windows|Vista  |
+|Windows XP|Windows|XP     |
+
 
 ### LPAD(string, size, padstring)，RPAD(string, size, padstring) → varchar：特定の長さになるまで文字列を埋める
 padstringで指定したsizeまでstringで埋めます。下記は，数値文字（最大1000）を並び替え可能なように4桁の文字列に変換するクエリです。
@@ -115,6 +163,13 @@ FROM (
   VALUES '1','10','100','1000'
 ) AS t(s)
 ```
+|s   |pad_str|
+|----|-------|
+|1   |0001   |
+|10  |0010   |
+|100 |0100   |
+|1000|1000   |
+
 
 ### （応用）異なる接頭辞と異なる桁数の数値からなる文字列を並び替え可能にする
 
@@ -133,6 +188,13 @@ WITH sample AS
 SELECT REGEXP_EXTRACT(s,'^[^0-9]*') AS prefix, REGEXP_EXTRACT(s,'[0-9]*$') AS num_str
 FROM sample
 ```
+|prefix|num_str|
+|------|-------|
+|am    |1      |
+|fm    |10     |
+|am    |100    |
+|fm    |1000   |
+
 
 次に，存在する数値部分のうちで最長の桁数を求めます。それより桁が少ない数値部分は，この最長の桁数分になるまで0で埋められることになります。
 
@@ -153,6 +215,10 @@ split_sample AS
 SELECT MAX(length(num_str)) AS max_len
 FROM split_sample
 ```
+|max_len|
+|-------|
+|4      |
+
 
 最後に，LPADですべての行の数値部分が4桁になるように左から0で埋め，接頭辞を前から結合して完成です。全体のクエリは以下になります。
 
@@ -179,6 +245,13 @@ SELECT prefix || LPAD(num_str, max_len, '0') AS s_can_sort
 FROM split_sample,stat
 ORDER BY s_can_sort
 ```
+|s_can_sort|
+|----------|
+|am0001    |
+|am0100    |
+|fm0010    |
+|fm1000    |
+
 
 ### SPLIT(string, delimiter) → array，SPLIT_PART(string, delimiter, index) → varchar：文字列を分割する
 
@@ -201,6 +274,17 @@ FROM (
     'Windows XP'
 ) AS t(s)
 ```
+|s   |splitted_strs           |os     |version|
+|----|------------------------|-------|-------|
+|Windows|["Windows"]             |Windows|       |
+|Windows 7|["Windows", "7"]        |Windows|7      |
+|Windows 8|["Windows", "8"]        |Windows|8      |
+|Windows 8.1|["Windows", "8.1"]      |Windows|8.1    |
+|Windows Phone|["Windows", "Phone"]    |Windows|Phone  |
+|Windows RT 8.1|["Windows", "RT", "8.1"]|Windows|RT     |
+|Windows Vista|["Windows", "Vista"]    |Windows|Vista  |
+|Windows XP|["Windows", "XP"]       |Windows|XP     |
+
 
 ## 正規表現の基礎を学ぶ
 「LIKEによる文字列の部分一致」では，文字列カラムの完全一致ではなく，ワイルドカードを用いた曖昧な一致の方法を見ました。以降では，曖昧さを残して文字列カラムと一致させるための記述を「パターン（正規表現）」と呼び，パターンに合う文字列を探し出すことを「パターンマッチ」と呼ぶことにします。
@@ -270,6 +354,15 @@ FROM (
   VALUES 'abcd', 'a1cd', 'a_cd', 'abbcd', 'abc', 'acd'
 ) AS t(str)
 ```
+|str |is_matched              |
+|----|------------------------|
+|abcd|true                    |
+|a1cd|true                    |
+|a_cd|true                    |
+|abbcd|false                   |
+|abc |false                   |
+|acd |false                   |
+
 
 #### 数字が2文字目にくる4文字のパターン
 ```sql
@@ -294,6 +387,13 @@ FROM (
   VALUES 'a1cd', 'abcd', 'a1c', 'a12cd'
 ) AS t(str)
 ```
+|str |is_matched              |is_matched|
+|----|------------------------|----------|
+|a1cd|true                    |true      |
+|abcd|false                   |false     |
+|a1c |false                   |false     |
+|a12cd|false                   |false     |
+
 
 #### 数字以外の文字が2文字目にくる4文字のパターン
 
@@ -323,6 +423,14 @@ FROM (
   VALUES 'abcd', 'a_cd', 'a1cd', 'abbcd', 'acd'
 ) AS t(str)
 ```
+|str |is_matched              |is_matched|is_matched|
+|----|------------------------|----------|----------|
+|abcd|true                    |true      |true      |
+|a_cd|true                    |true      |true      |
+|a1cd|false                   |false     |false     |
+|abbcd|false                   |false     |false     |
+|acd |false                   |false     |false     |
+
 
 ### 数量子（1. 最長一致）
 |構文  |Matches|
@@ -367,6 +475,15 @@ FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|acd |["acd"]                 |
+|abcd|["abcd"]                |
+|abcdacd|["abcd", "acd"]         |
+|abbcd|[]                      |
+|abbbcd|[]                      |
+|ab1cd|[]                      |
+
 
 #### bcの0〜1回の繰り返しを挟むパターン
 
@@ -400,6 +517,16 @@ FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abce', 'abcxd', 'abcbcd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|ad  |["ad"]                  |
+|abd |[]                      |
+|acd |[]                      |
+|abcd|["abcd"]                |
+|abce|[]                      |
+|abcxd|[]                      |
+|abcbcd|[]                      |
+
 
 #### bかcの0〜1回の繰り返しを挟むパターン
 
@@ -430,6 +557,15 @@ FROM (
   VALUES 'ad', 'abd', 'acd', 'acde', 'abcd', 'abbd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|ad  |["ad"]                  |
+|abd |["abd"]                 |
+|acd |["acd"]                 |
+|acde|["acd"]                 |
+|abcd|[]                      |
+|abbd|[]                      |
+
 
 #### 0〜1回の数字の繰り返しを挟むパターン
 
@@ -459,6 +595,13 @@ FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|XY  |["XY"]                  |
+|X1Y |["X1Y"]                 |
+|X123Y|[]                      |
+|X1Y23|["X1Y2"]                |
+
 
 ここまでは「?」を含むパターンの例を見てきました。ここからは，「*」（0回以上の繰り返し）を含むパターンについて例を使って検証していきます。
 
@@ -491,6 +634,15 @@ FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|acd |["acd"]                 |
+|abcd|["abcd"]                |
+|abcdacd|["abcd", "acd"]         |
+|abbcd|["abbcd"]               |
+|abbbcd|["abbbcd"]              |
+|ab1cd|[]                      |
+
 
 #### bcの0回以上の繰り返しを挟むパターン
 
@@ -522,6 +674,16 @@ FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abcxd', 'abcbcd', 'abcbce'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|ad  |["ad"]                  |
+|abd |[]                      |
+|acd |[]                      |
+|abcd|["abcd"]                |
+|abcxd|[]                      |
+|abcbcd|["abcbcd"]              |
+|abcbce|[]                      |
+
 
 #### bかcの0回以上の繰り返しを挟むパターン
 ```sql
@@ -551,6 +713,15 @@ FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abcbbcd', 'abce'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|ad  |["ad"]                  |
+|abd |["abd"]                 |
+|acd |["acd"]                 |
+|abcd|["abcd"]                |
+|abcbbcd|["abcbbcd"]             |
+|abce|[]                      |
+
 
 #### 数字の0回以上の繰り返しを挟むパターン
 
@@ -581,6 +752,14 @@ FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23','X12Z34Y'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|XY  |["XY"]                  |
+|X1Y |["X1Y"]                 |
+|X123Y|["X123Y"]               |
+|X1Y23|["X1Y23"]               |
+|X12Z34Y|[]                      |
+
 
 ここからは，「+」（1回以上の繰り返し）を含むパターンを例を用いて検証します。
 
@@ -613,6 +792,15 @@ FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|acd |[]                      |
+|abcd|["abcd"]                |
+|abcdacd|["abcd"]                |
+|abbcd|["abbcd"]               |
+|abbbcd|["abbbcd"]              |
+|ab1cd|[]                      |
+
 
 #### abの1回以上の繰り返しを挟むパターン
 ```sql
@@ -640,6 +828,15 @@ FROM (
   VALUES 'bcd', 'abcd', 'abbcd', 'ababcd', 'ababxcd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|bcd |[]                      |
+|abcd|["abcd"]                |
+|abbcd|[]                      |
+|ababcd|["ababcd"]              |
+|ababxcd|[]                      |
+
+
 #### bかcの1回以上の繰り返しを挟むパターン
 
 ```sql
@@ -668,6 +865,15 @@ FROM (
   VALUES 'ad', 'abd', 'acd', 'abcd', 'abce', 'abcbd'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|ad  |[]                      |
+|abd |["abd"]                 |
+|acd |["acd"]                 |
+|abcd|["abcd"]                |
+|abce|[]                      |
+|abcbd|["abcbd"]               |
+
 
 #### 数字の1回以上の繰り返しを挟まむパターン
 ```sql
@@ -692,6 +898,14 @@ FROM (
   VALUES 'XY','X1Y','X123Y','X1Y23','X12Z34Y'
 ) AS t(str)
 ```
+|str |matched                 |
+|----|------------------------|
+|XY  |[]                      |
+|X1Y |["X1Y"]                 |
+|X123Y|["X123Y"]               |
+|X1Y23|["X1Y23"]               |
+|X12Z34Y|[]                      |
+
 
 ここからは，{n,m}（n回以上m回以下の繰り返し）を含むパターンについて例を用いて検証します。
 
@@ -717,6 +931,15 @@ FROM (
   VALUES 'acd', 'abcd', 'abcdacd', 'abbcd', 'abbbcd', 'ab1cd'
 ) AS t(str)
 ```
+|str |m1                      |m2        |m3       |m4             |
+|----|------------------------|----------|---------|---------------|
+|acd |[]                      |[]        |[]       |["acd"]        |
+|abcd|[]                      |["abcd"]  |["abcd"] |["abcd"]       |
+|abcdacd|[]                      |["abcd"]  |["abcd"] |["abcd", "acd"]|
+|abbcd|[]                      |["abbcd"] |["abbcd"]|["abbcd"]      |
+|abbbcd|["abbbcd"]              |["abbbcd"]|[]       |[]             |
+|ab1cd|[]                      |[]        |[]       |[]             |
+
 
 #### (ab)に対する{n,m}の繰り返しを挟んだパターンの例
 マッチする文字列（「[ ]」はマッチする部分を示す）
@@ -737,6 +960,15 @@ FROM (
   VALUES 'acd', 'bcd','abcd', 'abbcd', 'ababcd', 'ab1cd'
 ) AS t(str)
 ```
+|str |m1                      |m2        |m3       |m4             |
+|----|------------------------|----------|---------|---------------|
+|acd |[]                      |[]        |[]       |["cd"]         |
+|bcd |[]                      |[]        |[]       |["cd"]         |
+|abcd|[]                      |["abcd"]  |["abcd"] |["abcd"]       |
+|abbcd|[]                      |[]        |[]       |["cd"]         |
+|ababcd|["ababcd"]              |["ababcd"]|["ababcd"]|["ababcd"]     |
+|ab1cd|[]                      |[]        |[]       |["cd"]         |
+
 
 #### 数字に対する{n,m}の繰り返しを挟んだパターンの例
 
@@ -763,6 +995,10 @@ FROM (
   VALUES '03-123-4567'
 ) AS t(str)
 ```
+|str |m1                      |m2        |m3       |m4             |m5                                       |
+|----|------------------------|----------|---------|---------------|-----------------------------------------|
+|03-123-4567|["123", "456"]          |[]        |["03", "123", "4567"]|["03", "12", "3", "45", "67"]|["03", "", "12", "3", "", "45", "67", ""]|
+
 
 ### 数量子（2. 控えめなものと強欲なもの）
 数量子には「控えめ」な数量子と「強欲」な数量子が存在します。普通の数量子との違いは，結果的にマッチする文字列をパターンの最小の範囲にとどめるか，パターンの最大の範囲まで取ってくるかにあります。
@@ -848,6 +1084,13 @@ FROM (
   VALUES 'acd', 'abcd', 'abbcd', 'abbbcd'
 ) AS t(str)
 ```
+|str |m1                      |m1_short  |m1_long  |m2             |m2_short                                 |m2_long |m3    |m3_short|m3_long|
+|----|------------------------|----------|---------|---------------|-----------------------------------------|--------|------|--------|-------|
+|acd |[]                      |[]        |[]       |["a"]          |["a"]                                    |["a"]   |["a"] |["a"]   |["a"]  |
+|abcd|["ab"]                  |["ab"]    |["ab"]   |["ab"]         |["a"]                                    |["ab"]  |["ab"]|["a"]   |["ab"] |
+|abbcd|["abb"]                 |["ab"]    |["abb"]  |["abb"]        |["a"]                                    |["abb"] |["ab"]|["a"]   |["ab"] |
+|abbbcd|["abbb"]                |["ab"]    |["abbb"] |["abbb"]       |["a"]                                    |["abbb"]|["ab"]|["a"]   |["ab"] |
+
 
 #### 数字の3種類の繰り返しに対応したパターンの例
 
@@ -868,7 +1111,7 @@ FROM (
 '[\d]?+'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
 ```
 
-確認クエリ（結果は省略）
+確認クエリ
 
 ```sql
 SELECT str, 
@@ -887,6 +1130,10 @@ FROM (
   VALUES '03-123-4567'
 ) AS t(str)
 ```
+|str |m1                      |m1_short  |m1_long  |m2             |m2_short                                 |m2_long |m3    |m3_short|m3_long|
+|----|------------------------|----------|---------|---------------|-----------------------------------------|--------|------|--------|-------|
+|03-123-4567|["03", "123", "4567"]   |["0", "3", "1", "2", "3", "4", "5", "6", "7"]|["03", "123", "4567"]|["03", "", "123", "", "4567", ""]|["", "", "", "", "", "", "", "", "", "", "", ""]|["03", "", "123", "", "4567", ""]|["0", "3", "", "1", "2", "3", "", "4", "5", "6", "7", ""]|["", "", "", "", "", "", "", "", "", "", "", ""]|["0", "3", "", "1", "2", "3", "", "4", "5", "6", "7", ""]|
+
 
 #### 数字とハイフンの3種類の繰り返しに対応したパターンの例
 
@@ -907,7 +1154,7 @@ FROM (
 '[\d-]?+'  # ⇒ [0][3]-[1][2][3]-[4][5][6][7]
 ```
 
-確認クエリ（結果は省略）
+確認クエリ
 ```sql
 SELECT str, 
   REGEXP_EXTRACT_ALL(str,'[\d-]+')  AS m1,
@@ -925,6 +1172,10 @@ FROM (
   VALUES '03-123-4567'
 ) AS t(str)
 ```
+|str |m1                      |m1_short  |m1_long  |m2             |m2_short                                 |m2_long |m3    |m3_short|m3_long|
+|----|------------------------|----------|---------|---------------|-----------------------------------------|--------|------|--------|-------|
+|03-123-4567|["03-123-4567"]         |["0", "3", "-", "1", "2", "3", "-", "4", "5", "6", "7"]|["03-123-4567"]|["03-123-4567", ""]|["", "", "", "", "", "", "", "", "", "", "", ""]|["03-123-4567", ""]|["0", "3", "-", "1", "2", "3", "-", "4", "5", "6", "7", ""]|["", "", "", "", "", "", "", "", "", "", "", ""]|["0", "3", "-", "1", "2", "3", "-", "4", "5", "6", "7", ""]|
+
 
 ### 境界正規表現エンジン
 「境界正規表現エンジン」は，文字列の先頭や末尾などの「境界」を指示するための記号です。境界正規表現エンジンが使われたパターンでは，「〜を含む」だけでなく，「〜から始まる」や「〜で終わる」といった柔軟な記述が可能になります。
@@ -966,6 +1217,14 @@ FROM (
          'abc' || CHR(10) --ラインフィード (LF)
 ) AS t(str)
 ```
+|str |is_m1                   |is_m2     |is_m3    |is_m4          |is_m5                                    |
+|----|------------------------|----------|---------|---------------|-----------------------------------------|
+|abc |true                    |true      |true     |true           |false                                    |
+|abcxyz|true                    |true      |false    |false          |false                                    |
+|xyzabc|true                    |false     |true     |false          |false                                    |
+|xabcx|true                    |false     |false    |false          |false                                    |
+|abc |true                    |true      |true     |true           |true                                     |
+
 
 #### よく遭遇するパターン例
 最後に，よく目にするであろう正規表現のパターンを一覧にして少しだけまとめておきます。
@@ -990,6 +1249,10 @@ SELECT
  REGEXP_EXTRACT_ALL('123-1234', '^[0-9]{3}-[0-9]{4}$') AS m6,
  REGEXP_EXTRACT_ALL('2009/7/29', '^[0-9]{4}/[01]?[0-9]/[0123]?[0-9]$') AS m7
 ```
+|m1  |m2                      |m3        |m4       |m5             |m6                                       |m7           |
+|----|------------------------|----------|---------|---------------|-----------------------------------------|-------------|
+|["123456789"]|["abcdefg"]             |["ABCDEFG"]|["ABCdefg"]|["12aaAA"]     |["123-1234"]                             |["2009/7/29"]|
+
 
 ## 正規表現で文字列を抽出する
 
@@ -1008,6 +1271,12 @@ SELECT td_url, REGEXP_EXTRACT(td_url,'fluentd.org') AS match_str
 FROM sample_accesslog_fluentd
 LIMIT 10
 ```
+|td_url|match_str               |
+|------|------------------------|
+|http://docs.fluentd.org/ja/categories/installation|fluentd.org             |
+|http://docs.fluentd.org/articles/config-file|fluentd.org             |
+|http://docs.fluentd.org/articles/windows|fluentd.org             |
+
 
 ### いずれかの文字列を含む文字列で最初にマッチしたものを返す
 正規表現では，「|」で区切って複数の文字列を並べることにより，そのいずれかにマッチするかどうかを調べることができます。これにより，URLの最後が以下のいずれかのグループにマッチするものだけを抽出するクエリを書いてみましょう。
@@ -1027,6 +1296,12 @@ FROM
 WHERE match_str1 IS NOT NULL OR match_str2 IS NOT NULL
 LIMIT 10
 ```
+|td_url                                     |match_str1|match_str2|
+|-------------------------------------------|----------|----------|
+|http://docs.fluentd.org/articles/out_others|NULL      |out_others|
+|http://docs.fluentd.org/articles/out_mongo |NULL      |out_mongo |
+|http://docs.fluentd.org/articles/out_others|NULL      |out_others|
+
 上記のパターンは「(out_.*$)」と非常に簡単に記述できます。このパターンであれば他のoutを含む文字列を逃すこともありません。
 
 なお，マッチしない文字列を除外したい場合にはREGEXP_LIKEという関数が使えますが，この関数については後述します。ここでは，PrestoではREGEXP_EXTRACTでマッチしなかった場合にNULLが返ることを利用して，WHERE節でNULLを除外するSELECT節により外側から包んでいます。ただし，REGEXP_EXTRACTでマッチしなかった場合の返り値はプラットフォームにより異なるので（例えばHiveでは空文字が返ります），マッチしない場合にFALSEを返す後述の判定関数REGEXP_LIKEを使うことを強くお薦めします。
@@ -1040,6 +1315,12 @@ SELECT td_url, REGEXP_EXTRACT(td_url,'(docs.fluentd.org)',1) AS match_str
 FROM sample_accesslog_fluentd
 LIMIT 10
 ```
+|td_url                                     |match_str       |
+|-------------------------------------------|----------------|
+|http://docs.fluentd.org/ja/articles/buf_file|docs.fluentd.org|
+|http://docs.fluentd.org/ja/articles/quickstart|docs.fluentd.org|
+|http://www.fluentd.org/testimonials        |NULL            |
+
 
 繰り返しになりますが，マッチしなかった場合のREGEXP_EXTRACTの返り値は，PrestoではNULLですが，Hiveでは空文字です。挙動が異なるので注意しましょう。
 
@@ -1047,8 +1328,7 @@ LIMIT 10
 td_urlが「docs.fluentd.org」を含み，かつその後ろに「out_file」が含まれるものを直接抽出することを考えてみましょう。
 この場合，patternは「(docs.fluentd.org).*(out_file)」と書きます。グループ間の「.*」は，「その部分に何らかの文字が入る（文字がなくてもよい）」という意味です。「( )」を使わずに「docs.fluentd.org.*out_file」とした場合との違いは，「( )」を使うと1番目のグループに最初にマッチした部分文字列，2番目のグループに次にマッチした文字列を直接取り出せるのに対し，「( )」を使わないとマッチした全体しか返せないことです。
 ```sql
-WITH 
-sample AS
+WITH sample AS
 ( 
   SELECT s FROM
   ( 
@@ -1064,6 +1344,13 @@ SELECT
      REGEXP_EXTRACT(s,'(docs.fluentd.org).*(out_file)',2) AS match_str2
 FROM sample
 ```
+|s                                          |match_str1      |match_str2|
+|-------------------------------------------|----------------|----------|
+|https://docs.fluentd.org/v0.12/articles/out_file|docs.fluentd.org|out_file  |
+|https://docs.fluentd.org/v0.12/articles/out_forward|NULL            |NULL      |
+|https://www.fluentd.org/v0.12/articles/out_file|NULL            |NULL      |
+|out_file/article/docs.fluentd.org/         |NULL            |NULL      |
+
 
 上記では以下のケースを試しています。
 
@@ -1080,8 +1367,7 @@ NG：out_file/article/docs.fluentd.org/ （グループの出現順序が異な�
 「(docs.fluentd.org|out_file)」というパターンは，「docs.fluentd.orgまたはout_file」の意味になり，どちらか片方にマッチすればよいことになります。順番が違っていても問題ありません。両方マッチした場合の返り値は，先にマッチしたほうの値です。
 
 ```sql
-WITH 
-sample AS
+WITH sample AS
 ( 
   SELECT s FROM
   ( 
@@ -1096,11 +1382,18 @@ SELECT
   s, REGEXP_EXTRACT(s,'(docs.fluentd.org|out_file)',1) AS match_str
 FROM sample
 ```
+|s                                          |match_str       |
+|-------------------------------------------|----------------|
+|https://docs.fluentd.org/v0.12/articles/out_file|docs.fluentd.org|
+|https://docs.fluentd.org/v0.12/articles/out_forward|docs.fluentd.org|
+|https://www.fluentd.org/v0.12/articles/out_file|out_file        |
+|out_file/article/docs.fluentd.org/         |out_file        |
+
+
 ### マッチした文字列をすべて取り出す
 REGEXP_EXTRACT_ALLは，マッチした文字列をarrayの返り値としてすべて取り出します。この関数ではグループを意識してもあまり意味がありません。
 ```sql
-WITH 
-sample AS
+WITH sample AS
 ( 
   SELECT s FROM
   ( 
@@ -1116,6 +1409,13 @@ SELECT
      REGEXP_EXTRACT_ALL(s,'docs.fluentd.org|out_file') AS match_strs2
 FROM sample
 ```
+|s                                          |match_strs1     |match_strs2                     |
+|-------------------------------------------|----------------|--------------------------------|
+|https://docs.fluentd.org/v0.12/articles/out_file|["docs.fluentd.org/v0.12/articles/out_file"]|["docs.fluentd.org", "out_file"]|
+|https://docs.fluentd.org/v0.12/articles/out_forward|[]              |["docs.fluentd.org"]            |
+|https://www.fluentd.org/v0.12/articles/out_file|[]              |["out_file"]                    |
+|out_file/article/docs.fluentd.org/         |[]              |["out_file", "docs.fluentd.org"]|
+
 
 ### メタ文字をエスケープしてマッチさせる
 パターンを記述するために記号として使われるメタ文字```（\ * + . ? { } ( ) [ ] ^ $ - | ）```自身を文字としてマッチさせるにはどうしたらよいでしょうか？ その場合は，それぞれのメタ文字の前にエスケープ「\」を1つ置くことで，単なる文字とみなされるようにします。
@@ -1129,6 +1429,11 @@ SELECT
     '\^\\\\\(\.\+\*\?\)\[\|\]\$'
 )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|^\\(.+*?)[&#124;]$                              |
+
+
 2. ```「(.+*?)」```で取り出す
 両端の「(」と「)」はエスケープする必要がありますが，その間に続く文字は内容を気にせず「.*」と書いてマッチさせられます。
 ```sql
@@ -1138,6 +1443,11 @@ SELECT
     '\(.*\)'
 )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|(.+*?)                                     |
+
+
 3. ```「(.+*?)」```と```「[|]」```を，それぞれGROUP1，GROUP2としてマッチさせる
 それぞれを取り出すためのパターンの外側に括弧「( )」を付けます。
 ```sql
@@ -1153,6 +1463,10 @@ SELECT
     2
   ) AS group2
 ```
+|group1                                     |group2|
+|-------------------------------------------|------|
+|(.+*?)                                     |[|]   |
+
 
 ## 正規表現で文字列を条件判定する
 REGEXP_LIKEは，正規表現で記述されたパターンにマッチするか否かを試し，マッチすればTRUEを，マッチしなければFALSEを返す関数です。REGEXP_EXTRACT関数と違ってマッチした部分文字列は返しませんが，条件判定で正しく利用することができます。この関数は，主に特定の正規表現にマッチする文字列を含んだレコードのみを抽出したい場合に，WHERE節とともに使います。
@@ -1164,6 +1478,12 @@ FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'docs.fluentd.org')
 LIMIT 10
 ```
+|td_url                                     |
+|-------------------------------------------|
+|http://docs.fluentd.org/articles/in_unix   |
+|http://docs.fluentd.org/articles/http-to-hdfs|
+|http://docs.fluentd.org/articles/config-file|
+
 
 ## 正規表現で文字列を置換する
 REGEXP_REPLACEは，正規表現によって記述されたパターンにマッチした部分を別の文字列で置換する関数です。マッチしなかった場合には何もせず元の文字列を返します。
@@ -1178,6 +1498,13 @@ SELECT td_url,
 FROM sample_accesslog_fluentd
 LIMIT 10
 ```
+|td_url                                     |replaced_url                                     |
+|-------------------------------------------|-------------------------------------------------|
+|http://www.fluentd.org/guides              |www.fluentd.org/guides                           |
+|http://www.fluentd.org/blog/fluentd-v0.10.56-is-released|www.fluentd.org/blog/fluentd-v0.10.56-is-released|
+|http://www.fluentd.org/                    |www.fluentd.org/                                 |
+
+
 さらに，複数のパターンを「|」で列挙することで，それらを一度に変換することができます。
 ```sql
 SELECT td_url,
@@ -1187,6 +1514,13 @@ FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'\?')
 LIMIT 10
 ```
+|td_url                                     |replaced_url                                     |
+|-------------------------------------------|-------------------------------------------------|
+|http://www.fluentd.org/blog/fluentd-goes-gopher?utm_content=buffer4bfc1&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer|www.fluentd.org/blog/fluentd-goes-gopher         |
+|http://docs.fluentd.org/articles/support?aliId=1395429|docs.fluentd.org/articles/support                |
+|http://docs.fluentd.org/articles/quickstart?aliId=1527960|docs.fluentd.org/articles/quickstart             |
+
+
 なお，文字列の中でパターンが複数回マッチする場合には，そのすべての箇所が置換されることになります。下記のクエリでは，td_urlの「/」という文字がすべて「@」に置換されます。
 ```sql
 SELECT td_url,
@@ -1194,6 +1528,14 @@ SELECT td_url,
 FROM sample_accesslog_fluentd
 LIMIT 10
 ```
+|td_url                                     |replaced_url                                     |
+|-------------------------------------------|-------------------------------------------------|
+|http://www.fluentd.org/blog/               |http:@@www.fluentd.org@blog@                     |
+|http://docs.fluentd.org/articles/in_tail   |http:@@docs.fluentd.org@articles@in_tail         |
+|http://docs.fluentd.org/ja/articles/formatter-plugin-overview|http:@@docs.fluentd.org@ja@articles@formatter-plugin-overview|
+
+
+
 マッチする文字列の一部を，置換後の文字列で再利用したい場合には，「$N」（Nはグループ番号）を使います。グループの概念を使うので，パターンのうち再利用したい部分を「( )」で囲みます。
 ```sql
 SELECT td_url,
@@ -1204,6 +1546,12 @@ FROM sample_accesslog_fluentd
 WHERE REGEXP_LIKE(td_url,'docs.fluentd.org')
 LIMIT 10
 ```
+|td_url                                     |replaced_url                                     |
+|-------------------------------------------|-------------------------------------------------|
+|http://docs.fluentd.org/articles/out_file  |docs.fluentd.org | :// | http/articles/out_file  |
+|http://docs.fluentd.org/articles/quickstart|docs.fluentd.org | :// | http/articles/quickstart|
+|http://docs.fluentd.org/articles/plugin-development|docs.fluentd.org | :// | http/articles/plugin-development|
+
 
 ## 正規表現で文字列を分割する
 REGEXP_SPLITは，正規表現のパターンによって文字列を分割する関数です。
@@ -1214,3 +1562,9 @@ SELECT td_url,
 FROM sample_accesslog_fluentd
 LIMIT 10
 ```
+|td_url                                     |splitted_strs                                    |
+|-------------------------------------------|-------------------------------------------------|
+|http://docs.fluentd.org/articles/install-by-rpm|["http:", "", "docs.fluentd.org", "articles", "install-by-rpm"]|
+|http://docs.fluentd.org/articles/install-by-deb|["http:", "", "docs.fluentd.org", "articles", "install-by-deb"]|
+|http://docs.fluentd.org/articles/buf_file  |["http:", "", "docs.fluentd.org", "articles", "buf_file"]|
+
