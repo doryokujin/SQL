@@ -15,6 +15,10 @@ SELECT k, ARRAY_AGG(v) AS list
 FROM a1
 GROUP BY k
 ```
+|k                                          |list                                             |
+|-------------------------------------------|-------------------------------------------------|
+|a                                          |[1, 2, 3, 4, 5, 6]                               |
+
 
 ## 要素のNULLを除外する
 
@@ -37,6 +41,10 @@ list_table AS
 )
 SELECT list FROM list_table
 ```
+|list                                       |
+|-------------------------------------------|
+|[1, 2, 3, 4, 5]                            |
+
 
 ### 方法2.（集約時）COALESCEでNULLの要素を置き換える
 
@@ -57,6 +65,10 @@ list_table AS
 
 SELECT list FROM list_table
 ```
+|list                                       |
+|-------------------------------------------|
+|[0, 0, 3, 4, 5, 1, 2]                      |
+
 
 ### 方法3. FILTER関数で除外する
 
@@ -65,12 +77,20 @@ SELECT list FROM list_table
 ```sql
 SELECT FILTER( ARRAY[NULL,1,2,NULL,3,4,5], x -> x IS NOT NULL ) AS list
 ```
+|list                                       |
+|-------------------------------------------|
+|[1, 2, 3, 4, 5]                            |
+
 
 ### （間違い）ARRAY_REMOVEを使う
+ARRAY_REMOVEを使って取り除く要素としてNULLを指定しても，結果がNULLとなり正しく動作しません。
 ```sql
-SELECT FILTER( ARRAY[NULL,1,2,NULL,3,4,5], x -> x IS NOT NULL ) AS list
-FROM list_table
+SELECT ARRAY_REMOVE(ARRAY[NULL,1,2,NULL,3,4,5],NULL) AS list
 ```
+|list                                       |
+|-------------------------------------------|
+|NULL                                       |
+
 
 ## 1つのLISTに関する関数
 
