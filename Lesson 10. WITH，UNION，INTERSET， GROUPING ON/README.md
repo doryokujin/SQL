@@ -286,6 +286,12 @@ GROUP BY GROUPING SETS(
   (category,sub_category,goods_id)
 )
 ```
+|category                                   |sub_category|goods_id|sales   |
+|-------------------------------------------|------------|--------|--------|
+|Automotive and Industrial                  |Safety      |542003  |32062   |
+|Electronics and Computers                  |Wearable Technology|NULL        |16601999|
+|Electronics and Computers                  |Home Audio and Theater|540139  |72390   |
+
 
 上記のクエリでは，以下を一度に計算しています。
 
@@ -313,6 +319,12 @@ FROM sales_slip
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY category, sub_category, goods_id
 ```
+|category                                   |sub_category|goods_id|sales   |
+|-------------------------------------------|------------|--------|--------|
+|Electronics and Computers                  |Car Electronics and GPS|494460  |25551   |
+|Books and Audible                          |Textbooks   |494913  |38136   |
+|Sports and Outdoors                        |Golf        |496492  |57600   |
+
 
 上記の書き方には，UNION ALLでカラムを揃えるためにディメンジョンに入らないカラムについてSELECT節内で適宜NULLを入れるといった考慮が必要であり，冗長であるという難点があります。また，上の例では全体の売上集計は含まれませんが，
 
@@ -327,6 +339,12 @@ GROUP BY GROUPING SETS(
   (category,sub_category,goods_id)
 )
 ```
+|category                                   |sub_category|goods_id|sales   |
+|-------------------------------------------|------------|--------|--------|
+|Electronics and Computers                  |Musical Instruments|530651  |18000   |
+|Sports and Outdoors                        |Leisure Sports and Game Room|NULL        |12641876|
+|Home and Garden and Tools                  |Home Automation|NULL        |14593758|
+
 
 と記述することによってそれも含むことが可能です。
 GROUPING SETSは便利ですが，今のところSETS内でTD_TIME_FORMATなどの関数を用いることはできないようです。
@@ -361,6 +379,11 @@ GROUP BY GROUPING SETS(
   (m,category,sub_category,goods_id)
 )
 ```
+|m                                          |category|sub_category|goods_id|sales  |
+|-------------------------------------------|--------|------------|--------|-------|
+|2011-10-01                                 |Movies and Music and Games|Musical Instruments|532989  |25755  |
+|2011-10-01                                 |Automotive and Industrial|Automotive Tools and Equipment|531186  |25840  |
+|2011-10-01                                 |Home and Garden and Tools|Hardware    |NULL        |1870255|
 
 なお，最初に紹介したクエリでは「category ⊃ sub_category ⊃ goods_is」という階層を意識した記述をしていますが，ディメンジョン間の階層を意識せずに下記のように記述することも可能です。
 
@@ -374,6 +397,12 @@ GROUP BY GROUPING SETS(
   (goods_id)
 )
 ```
+|category                                   |sub_category|goods_id|sales   |
+|-------------------------------------------|------------|--------|--------|
+|NULL                                       |NULL        |526973  |495282  |
+|NULL                                       |NULL        |526422  |53074   |
+|NULL                                       |NULL        |524133  |151480  |
+
 
 最後に，元々カラムの値としてあったNULLと，GROUPING SETSによって生じたNULLとを区別する方法を紹介します。下記のように多少複雑です。
 
@@ -388,6 +417,12 @@ GROUP BY GROUPING SETS(
   (category,sub_category,goods_id)
 )
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Clothing and Shoes and Jewelry             |Boys        |540286  |13328   |0       |
+|Clothing and Shoes and Jewelry             |Women       |539249  |13328   |0       |
+|Clothing and Shoes and Jewelry             |Boys        |NULL    |15730594|1       |
+
 
 GROUPING(category,sub_category,goods_id)により，引数に指定した1番右のディメンジョンから順に以下のルールで値が割り振られます。
 
@@ -411,6 +446,12 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY ROLLUP(category,sub_category)
 ORDER BY group_id, category, sub_category
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Automotive and Industrial                  |Lab and Scientific|538429  |14940   |0       |
+|Movies and Music and Games                 |Digital Games|538349  |155690  |0       |
+|Electronics and Computers                  |NULL            |NULL        |290630163|3       |
+
 
 上記のクエリは，下記の要領でサブ集計を巻き上げてくれます。
 - category × sub_category ごとの売上集計（group_id = 0）
@@ -431,6 +472,12 @@ GROUP BY GROUPING SETS(
 )
 ORDER BY group_id, category, sub_category
 ```
+|category                                   |sub_category|sales |group_id|
+|-------------------------------------------|------------|------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|15404860|0       |
+|Automotive and Industrial                  |Automotive Tools and Equipment|15047016|0       |
+|Automotive and Industrial                  |Car/Vehicle Electronics and GPS|14112998|0       |
+
 
 次に，3つのディメンジョンのROLLUPを考えましょう。
 
@@ -442,6 +489,12 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY ROLLUP(category,sub_category,goods_id)
 ORDER BY group_id, category, sub_category, goods_id
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|466889  |24572   |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|466983  |3800    |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|467077  |3410    |0       |
+
 
 上記のクエリは，下記の要領でサブ集計を巻き上げてくれます。
 
@@ -481,6 +534,13 @@ AND SUBSTR(groups3.name,1,1) ='3'
 WHERE (4+2+1-groups1.id-groups2.id-groups3.id) IN (0,1,3,7)
 ORDER BY group_id
 ```
+|name1                                      |name2|name3 |group_id|
+|-------------------------------------------|-----|------|--------|
+|1_category                                 |2_sub_category|3_goods_id|0       |
+|1_category                                 |2_sub_category|3_NULL|1       |
+|1_category                                 |2_NULL|3_NULL|3       |
+|1_NULL                                     |2_NULL|3_NULL|7       |
+
 
 3引数の場合のROLLUPクエリの例は，以下のGROUPING SETSと同じです。
 
@@ -497,6 +557,12 @@ GROUP BY GROUPING SETS(
 )
 ORDER BY group_id, category, sub_category, goods_id
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|466889  |24572   |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|466983  |3800    |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|467077  |3410    |0       |
+
 
 最後に，TD_TIME_FORMATを使ったROLLUPを考えます。こちらはサブクエリを書く必要があります。また，TD_TIME_FORMATを必ず先頭のディメンジョンにすると目的にかなう場合が多いようです。
 
@@ -512,6 +578,12 @@ FROM
 GROUP BY ROLLUP (m,category,sub_category,goods_id)
 ORDER BY m,category, sub_category, goods_id
 ```
+|m                                          |category|sub_category|goods_id|sales|group_id|
+|-------------------------------------------|--------|------------|--------|-----|--------|
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|466889  |24572|0       |
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|466983  |3800 |0       |
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|467077  |3410 |0       |
+
 
 上記のクエリは，下記の要領でサブ集計を巻き上げてくれます。
 - m × category × sub_category × goods_idごとの売上集計（group_id = 0）
@@ -557,6 +629,13 @@ AND SUBSTR(groups4.name,1,1) ='4'
 WHERE (8+4+2+1-groups1.id-groups2.id-groups3.id-groups4.id) IN (0,1,3,7,15)
 ORDER BY group_id
 ```           
+|name1                                      |name2|name3 |name4   |group_id|
+|-------------------------------------------|-----|------|--------|--------|
+|1_month                                    |2_category|3_sub_category|4_goods_id|0       |
+|1_month                                    |2_category|3_sub_category|4_NULL  |1       |
+|1_month                                    |2_category|3_NULL|4_NULL  |3       |
+|1_month                                    |2_NULL|3_NULL|4_NULL  |7       |
+|1_NULL                                     |2_NULL|3_NULL|4_NULL  |15      |
 
 ### CUBE
 
@@ -570,6 +649,12 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY CUBE(category,sub_category)
 ORDER BY group_id, category, sub_category
 ```
+|category                                   |sub_category|sales |group_id|
+|-------------------------------------------|------------|------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|15404860|0       |
+|Automotive and Industrial                  |Automotive Tools and Equipment|15047016|0       |
+|Automotive and Industrial                  |Car/Vehicle Electronics and GPS|14112998|0       |
+
 
 上記のクエリは，GROUPING関数で割り当てられるgroup_idごとに下記の各集計を求めてくれます。
 
@@ -593,6 +678,12 @@ GROUP BY GROUPING SETS(
 )
 ORDER BY group_id, category, sub_category
 ```
+|category                                   |sub_category|sales |group_id|
+|-------------------------------------------|------------|------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|15404860|0       |
+|Automotive and Industrial                  |Automotive Tools and Equipment|15047016|0       |
+|Automotive and Industrial                  |Car/Vehicle Electronics and GPS|14112998|0       |
+
 
 次はCUBEに3つのディメンジョンを与えてみましょう。
 
@@ -604,6 +695,12 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY CUBE(category,sub_category,goods_id)
 ORDER BY group_id, category, sub_category, goods_id
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|466889  |24572   |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|466983  |3800    |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|467077  |3410    |0       |
+
 
 上記のクエリは，下記の各集計を求めてくれます。
 - category × sub_category × goods_id ごとの売上集計
@@ -655,6 +752,17 @@ ON groups2.name <> groups3.name AND groups1.name <> groups3.name
 AND SUBSTR(groups3.name,1,1) ='3'
 ORDER BY group_id
 ```
+|name1                                      |name2|name3 |group_id|
+|-------------------------------------------|-----|------|--------|
+|1_category                                 |2_sub_category|3_goods_id|0       |
+|1_category                                 |2_sub_category|3_NULL|1       |
+|1_category                                 |2_NULL|3_goods_id|2       |
+|1_category                                 |2_NULL|3_NULL|3       |
+|1_NULL                                     |2_sub_category|3_goods_id|4       |
+|1_NULL                                     |2_sub_category|3_NULL|5       |
+|1_NULL                                     |2_NULL|3_goods_id|6       |
+|1_NULL                                     |2_NULL|3_NULL|7       |
+
 
 先程の3つのディメンジョンに対するCUBEによるクエリは，以下のGROUPING SETSによるクエリと等価です。CUBEは，簡潔さと自動的に組合せを考えてくれる点で有用です。
 
@@ -675,6 +783,12 @@ GROUP BY GROUPING SETS(
 )
 ORDER BY group_id, category, sub_category, goods_id
 ```
+|category                                   |sub_category|goods_id|sales   |group_id|
+|-------------------------------------------|------------|--------|--------|--------|
+|Automotive and Industrial                  |Automotive Parts and Accessories|466889  |24572   |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|466983  |3800    |0       |
+|Automotive and Industrial                  |Automotive Parts and Accessories|467077  |3410    |0       |
+
 
 CUBEでも，ROLLUPと同じく，TD_TIME_FORMATなどの関数を入れることはできません。必要な場合は下記のように一度サブクエリを作る書き方をします。ない，時間カラムがNULLとされる集計はここでは望ましくないので省いています。
 
@@ -691,6 +805,12 @@ GROUP BY CUBE (m,category,sub_category,goods_id)
 HAVING m IS NOT NULL
 ORDER BY group_id, m, category, sub_category, goods_id
 ```
+|m                                          |category|sub_category|goods_id|sales|group_id|
+|-------------------------------------------|--------|------------|--------|-----|--------|
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|466889  |24572|0       |
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|466983  |3800 |0       |
+|2011-01-01                                 |Automotive and Industrial|Automotive Parts and Accessories|467077  |3410 |0       |
+
 この場合，CUBEが作る組合せとGROUPING関数の値は以下のクエリで取得できます。
 
 ```sql
@@ -727,6 +847,25 @@ ON groups3.name <> groups4.name AND groups2.name <> groups4.name AND groups1.nam
 AND SUBSTR(groups4.name,1,1) ='4'
 ORDER BY group_id
 ```
+|name1                                      |name2|name3 |name4   |group_id|
+|-------------------------------------------|-----|------|--------|--------|
+|1_month                                    |2_category|3_sub_category|4_goods_id|0       |
+|1_month                                    |2_category|3_sub_category|4_NULL  |1       |
+|1_month                                    |2_category|3_NULL|4_goods_id|2       |
+|1_month                                    |2_category|3_NULL|4_NULL  |3       |
+|1_month                                    |2_NULL|3_sub_category|4_goods_id|4       |
+|1_month                                    |2_NULL|3_sub_category|4_NULL  |5       |
+|1_month                                    |2_NULL|3_NULL|4_goods_id|6       |
+|1_month                                    |2_NULL|3_NULL|4_NULL  |7       |
+|1_NULL                                     |2_category|3_sub_category|4_goods_id|8       |
+|1_NULL                                     |2_category|3_sub_category|4_NULL  |9       |
+|1_NULL                                     |2_category|3_NULL|4_goods_id|10      |
+|1_NULL                                     |2_category|3_NULL|4_NULL  |11      |
+|1_NULL                                     |2_NULL|3_sub_category|4_goods_id|12      |
+|1_NULL                                     |2_NULL|3_sub_category|4_NULL  |13      |
+|1_NULL                                     |2_NULL|3_NULL|4_goods_id|14      |
+|1_NULL                                     |2_NULL|3_NULL|4_NULL  |15      |
+
 
 ここまでに紹介したGROUPING SETS，ROLLUP，CUBEは，さらに併用して使うことも可能です。しかし，カラムの組合せが複雑になるため，ここではこれ以上取り上げないこととします。
 
@@ -744,6 +883,11 @@ SELECT number, alphabet
 FROM t1
 WHERE EXISTS (SELECT * FROM t2 WHERE t1.number = t2.number)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+|3                                          |c       |
+
 
 ### IN
 前述のEXISTSは，INを用いることでシンプルかつ可読性が良い形に書き換えることができます。
@@ -758,6 +902,11 @@ SELECT number, alphabet
 FROM t1
 WHERE number IN (SELECT number FROM t2)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+|3                                          |c       |
+
 
 ### Scalarサブクエリ
 
@@ -771,9 +920,13 @@ SELECT number, alphabet
 FROM t1
 WHERE number = (SELECT MIN(number) FROM t2)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+
 
 ```sql
---結果なし
+--結果なし（t2のMAX=5に対してt1には5の値のnumberカラムが存在しない）
 WITH t1 AS
 ( SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alphabet) ),
 t2 AS
