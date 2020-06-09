@@ -949,7 +949,7 @@ ON slip.goods_id = smartphones.goods_id
 |3                                          |member03 |iwasawa_kogan@example.com|m     |30 |3                     |iOS |Apple iPhone 8 256GB  |78540 |
 |4                                          |member01 |takayama_kazuhisa@example.com|m     |27 |4                     |android|HUAWEI Mate 20 Pro    |79200 |
 |1                                          |member01 |takayama_kazuhisa@example.com|m     |27 |1                     |iOS |Apple iPhone XS 256GB |117480|
-|7                                          |member02 |akiyama_hiromasa@example.com|m     |33 |                      |    |                      |      |
+|7                                          |member02 |akiyama_hiromasa@example.com|m     |33 |NULL                      |NULL    |NULL                      |NULL      |
 |2                                          |member02 |akiyama_hiromasa@example.com|m     |33 |2                     |android|ASUS ROG Phone 2 512GB|91080 |
 |NULL                                       |NULL     |NULL                     |NULL  |NULL|5                     |iOS |Apple iPhone 7 32GB   |37180 |
 |NULL                                       |NULL     |NULL                     |NULL  |NULL|6                     |android|SHARP AQUOS zero      |48180 |
