@@ -228,6 +228,7 @@ JOIN master_members members
 ON slip.gender = members.gender
 ```
 また，master_smartphonesからosを結合キーにしても同様の間違った結果となります。
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, slip.gender, slip.goods_id, slip.os, goods_name, price
 FROM sales_slip_sp slip
@@ -235,19 +236,25 @@ JOIN master_members members
 ON slip.gender = members.gender
 JOIN master_smartphones smartphones
 ON slip.os = smartphones.os
+```
 
-LEFT OUTER JOIN
+## LEFT OUTER JOIN
 LEFT OUTER JOINは，相手が見つからなかったレコードに対して除外するのではなく，属性項目をNULLで埋めることによってレコードを残すことを目的とした方法です。元のレコードが消滅して見えなくなるのと，明示的にNULLによって「結合しなかったレコード」として残すのとでは，大きく意味合いが違います。
-レコードが変わらないケース
+
+### レコードが変わらないケース
 以下のクエリによりmember_idを結合キーにしてLEFT OUTER JOINした結果は，マスタ側で存在しないmember05の属性情報（geder，age）がNULLで埋められたものになります。重要なのは，LEFTとRIGHTのmember_idの値が異なることで，「slip.member_id=member05」に対して「members.member_id=NULL」になります。よって，一番外側のSELECT節では，どちらのテーブルの結合キーの値を取ってくるのかに注意する必要があります（多くはLEFT側です）。
 その他のレコードについてはINNER JOINのときの結果と変わりません。
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, members.member_id, mail, members.gender, age, goods_id
 FROM sales_slip_sp slip
 LEFT OUTER JOIN master_members members
 ON slip.member_id = members.member_id
+```
 
 member_idとgoods_idで同時にLEFT OUTER JOINすれば，各々で結合できなかった属性情報の値がNULLで埋まっていることが確認できます。
+
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, mail, members.gender, age, 
   smartphones.goods_id, smartphones.os, goods_name, price
@@ -256,16 +263,19 @@ LEFT OUTER JOIN master_members members
 ON slip.member_id = members.member_id
 LEFT OUTER JOIN master_smartphones smartphones
 ON slip.goods_id = smartphones.goods_id
+```
 
-結合できなかったレコードのほうを抽出する
+### 結合できなかったレコードのほうを抽出する
 LEFT OUTER JOINをうまく使えば，「結合できなかった」レコードのみを抽出することが可能です。INNER JOINでは結合できなかったレコードが消滅して特定できなかったのに対し，RIGHT TABLEの結合キーがNULLとなって残るこちらの方法であれば「WHERE IS NULL」で抽出できるからです。先程の2つのクエリで試してみましょう。
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, members.member_id, mail, members.gender, age, goods_id
 FROM sales_slip_sp slip
 LEFT OUTER JOIN master_members members
 ON slip.member_id = members.member_id
 WHERE members.member_id IS NULL
-
+```
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, mail, members.gender, age, 
   smartphones.goods_id, smartphones.os, goods_name, price
@@ -275,11 +285,15 @@ ON slip.member_id = members.member_id
 LEFT OUTER JOIN master_smartphones smartphones
 ON slip.goods_id = smartphones.goods_id
 WHERE members.member_id IS NULL OR smartphones.goods_id IS NULL
+```
 
-マスタデータがLEFT TABLEとなるケース
+### マスタデータがLEFT TABLEとなるケース
 INNER JOINの説明では，時系列データがLEFT TABLE（JOINの前に書く），マスタデータがRIGHT TABLE（JOINの後に書く）と説明しましたが，特殊な目的においてはマスタデータがLEFT TABLEになることがあります。それは，単純な入れ替えではなく，「マスタデータと（集計した）時系列データを結合する」場合です。
 今，それぞれのmember_idごとの過去の購入総額と購入名目を知りたいという目的があったとします。求められる結果は，member_idごとに1レコードです。この場合，時系列データのほうがmember_idをGROUP BYキーにして集計され，それがマスタ情報となって結合されることになります。ただし，購入総額が0のユーザーも0として集計したいので，LEFT OUTER JOINによって結合せずNULLとなった該当部分を0で埋める作業を行います。
+
 もし逆に，集計した時系列データをLEFT TABLE，master_membersをRIGHT TABLEとしてLEFT OUTER JOINした場合には，集計で0だったユーザーはLEFTに登場しないので，結合した結果にそのユーザーが現れません。そのため，購入総額0も含めたすべてのユーザーを集計するには，やはりマスタテーブルをLEFT TABLEにするしかありません。
+
+```sql
 -- WITH 文は省略
 SELECT members.member_id, COALESCE(sales,0) AS sales, goods_names,
   mail, gender, age
@@ -295,18 +309,21 @@ LEFT OUTER JOIN
 ) slip
 ON members.member_id = slip.member_id
 ORDER BY member_id
+```
 
-RIGHT OUTER JOIN
+## RIGHT OUTER JOIN
 RIGHT OUTER JOINは，LEFT OUTER JOINのテーブルの順序を入れ替えたものです。
 以下のクエリは，master_membersに対してsales_slip_spを結合していることになるので，今まで書いていた方向とは逆になっています。このクエリの結果では，購入のあったmember_idについては購入した分だけのレコード数が現れ，購入のなかったmember_idについては購入情報がNULLとなった結果が得られることになります。
+```sql
 -- WITH 文は省略
 SELECT members.member_id, receit_id, mail, members.gender, age, goods_id
 FROM sales_slip_sp slip
 RIGHT OUTER JOIN master_members members
 ON members.member_id = slip.member_id
 ORDER BY members.member_id, receit_id
-
+```
 以下のクエリは，これまでの例で書いていたLEFT OUTER JOINと同じ順序になっているので，同じ結果が得られます。
+```sql
 -- WITH 文は省略
 SELECT smartphones.goods_id, receit_id, member_id, os, goods_name, price
 FROM master_smartphones smartphones
@@ -316,15 +333,19 @@ RIGHT OUTER JOIN
 ) slip
 ON smartphones.goods_id = slip.goods_id
 ORDER BY goods_id, receit_id
+```
 
-FULL OUTER JOIN
+## FULL OUTER JOIN
 FULL OUTER JOINは，LEFT TABLEとRIGHT TABLEに順序をつけず，双方の結合キーをすべて残したまま，片側で結合できなかった情報はNULLで埋めて返す手法です。
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, members.member_id, mail, members.gender, age, goods_id
 FROM sales_slip_sp slip
 FULL OUTER JOIN master_members members
 ON slip.member_id = members.member_id
+```
 
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, mail, members.gender, age, 
   smartphones.goods_id, smartphones.os, goods_name, price
@@ -333,19 +354,24 @@ FULL OUTER JOIN master_members members
 ON slip.member_id = members.member_id
 FULL OUTER JOIN master_smartphones smartphones
 ON slip.goods_id = smartphones.goods_id
+```
 
-WHEREとONの違い
+## WHEREとONの違い
 JOINにおけるON節にはWHERE節と同じ条件式を記述しますが，これら2つの実行順序（それゆえのパフォーマンス）の違いを知ることは大変重要です。
-ON → JOIN（推奨）
+
+### ON → JOIN（推奨）
 ON節は，JOINが実行される前に先に双方のテーブルに対して評価されます。必要なレコードのみが抽出された後にJOINが実行されるので，後述するWHERE節の併用よりも効率が良くなります。
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, age
 FROM sales_slip_sp slip
 JOIN master_members members
 ON slip.member_id = members.member_id
 AND 30 <= members.age
-
+```
 ただしHive0.13ではON節の制約があり，上記のクエリは動くものの，以下のような両テーブルのキーの比較で「=」以外を使ったクエリは動かないので注意してください。上記のクエリは定数と片方のテーブルmembers.ageの比較なので「=」以外が使えています。
+
+```sql
 -- Hive
 WITH sales_slip_sp AS 
 ( SELECT STACK(
@@ -376,16 +402,23 @@ FROM sales_slip_sp slip
 JOIN master_members members
 ON slip.member_id = members.member_id
 AND slip.goods_id <= members.age
+```
+
 Hive0.13で上記を実行すると「SemanticException: Line 33:4 Both left and right aliases encountered in JOIN 'age'」というエラーになります。
-JOIN → WHERE（非推奨）
+
+### JOIN → WHERE（非推奨）
 WHERE節はJOINよりも後に実行されます。例えば以下のクエリは，まずJOINが行われた後に必要なレコードが抽出されるので，結果よりも大きなレコードがJOIN時にいったん生成されることになり，メモリおよびパフォーマンスに悪影響を及ぼします。
+
+```sql
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, age
 FROM sales_slip_sp slip
 JOIN master_members members
 ON slip.member_id = members.member_id
 WHERE 30 <= members.age
+```
 しかしながら，ON節に制約のあるHiveでは，「=」以外の両テーブルのキー比較はWHERE節で書くしかありません。
+```sql
 -- Hive
 -- WITH 文は省略
 SELECT receit_id, slip.member_id, age
@@ -393,9 +426,12 @@ FROM sales_slip_sp slip
 JOIN master_members members
 ON slip.member_id = members.member_id
 WHERE slip.goods_id <= members.age
+```
 
-WHERE TD_TIME_RANGE → JOIN（推奨）
+### WHERE TD_TIME_RANGE → JOIN（推奨）
 一番はじめに実行されるTD_TIME_RANGEなどのTIME/DATE UDFは，WHERE節のほうに記述しないと効かないので注意してください。
+
+```sql
 SELECT goods_id, members.member_id, age
 FROM sales_slip slip
 LEFT OUTER JOIN
@@ -404,9 +440,10 @@ LEFT OUTER JOIN
 ) members
 ON slip.member_id = members.member_id
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
--- AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST') 
+-- AND TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST') --NG
+```
 上記のクエリのWHEREをANDにしてしまうと，時間指定によるTimeIndex（必要なパーティ書ションにのみアクセス）が効きません。
-
+```sql
 WHERE TD_TIME_RANGE → ON → JOIN（推奨）
 以上をまとめると，先読みしたい時間範囲だけをWHERE節に記述し，その他はなるべくON節に記述するのがセオリーです。
 SELECT goods_id, members.member_id, age
@@ -418,9 +455,13 @@ LEFT OUTER JOIN
 ON slip.member_id = members.member_id 
 AND 30 <= members.age
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
-JOINと集計を同時に
+```
+
+## JOINと集計を同時に
 JOINした後で集計を行うケースはよくあります。以下にいくつか例を挙げてみました。以降の章では，より複雑で応用的なクエリがたくさん出てくるので，その際に混乱したら一度本章に戻ってきてください。
-グッズ名ごとの売上点数
+
+### グッズ名ごとの売上点数
+```sql
 -- WITH 文は省略
 SELECT goods_name, COUNT(1) AS cnt
 FROM sales_slip_sp slip
@@ -430,8 +471,10 @@ LEFT OUTER JOIN
 ) smartphones
 ON slip.goods_id = smartphones.goods_id
 GROUP BY goods_name
-　　　　　　　　　　　　　　
-グッズ名ごとの購入者の平均年齢
+```　　　　　　　　　　　
+
+### グッズ名ごとの購入者の平均年齢
+```sql
 -- WITH 文は省略
 SELECT goods_name, COUNT(1) AS cnt, AVG(age) AS avg_age
 FROM sales_slip_sp slip
@@ -446,8 +489,9 @@ LEFT OUTER JOIN
 ) smartphones
 ON slip.goods_id = smartphones.goods_id
 GROUP BY goods_name
-
-グッズ名ごとの購入者の男女別平均年齢
+```
+### グッズ名ごとの購入者の男女別平均年齢
+```sql
 -- WITH 文は省略
 SELECT goods_name, 
   COUNT(IF(members.gender='m',1,NULL)) AS cnt_m,
@@ -466,9 +510,12 @@ LEFT OUTER JOIN
 ) smartphones
 ON slip.goods_id = smartphones.goods_id
 GROUP BY goods_name
+```
 
-より多くのデータでの実行例
+### より多くのデータでの実行例
 最後に，より多くのデータで同じことをやってみましょう。以下では1レシートあたりの男女の平均購入価格も加えて求めています。
+
+```sql
 SELECT goods_id, 
   COUNT(IF(members.gender='男',1,NULL)) AS cnt_m,
   COUNT(IF(members.gender='女',1,NULL)) AS cnt_f,
@@ -485,5 +532,5 @@ ON slip.member_id = members.member_id
 WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY goods_id
 ORDER BY cnt_m+cnt_f DESC
-
+```
 
