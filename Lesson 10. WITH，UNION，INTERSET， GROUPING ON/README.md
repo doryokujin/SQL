@@ -11,6 +11,15 @@ WITH numbers AS
 
 SELECT number FROM numbers
 ```
+|number                                     |
+|-------------------------------------------|
+|1                                          |
+|2                                          |
+|3                                          |
+|4                                          |
+|5                                          |
+|6                                          |
+
 
 カンマで区切ることにより，複数のテンポラリテーブルを参照できます。
 
@@ -24,6 +33,15 @@ SELECT numbers.number, alphabet
 FROM numbers, alphabets
 WHERE numbers.number = alphabets.number
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+|4                                          |d       |
+|2                                          |b       |
+|3                                          |c       |
+|5                                          |e       |
+|6                                          |f       |
+
 
 WITH節は，その可読性のよさから，既存のテーブルからSUMやAVG，MAX，MINなどの統計値を取り出して保存しておき，再度同じテーブルからレコードごとにその統計値を一緒に参照するという形でも利用されます。
 
@@ -36,6 +54,15 @@ stats AS
 SELECT number, 1.0*number/max_num AS ratio_from_max
 FROM numbers, stats
 ```
+|number                                     |ratio_from_max|
+|-------------------------------------------|--------------|
+|1                                          |0.16666666666666666|
+|2                                          |0.3333333333333333|
+|3                                          |0.5           |
+|4                                          |0.6666666666666666|
+|5                                          |0.8333333333333334|
+|6                                          |1.0           |
+
 
 この例では，「FROM numbers, stats」の箇所でCROSS JOINを行っています。ただし，statsのレコードが1行しかないので，numbersの各レコードにstatsのレコードが付与された形になっています。
 
@@ -64,6 +91,12 @@ WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
 GROUP BY TD_TIME_FORMAT(time,'yyyy-MM-01','JST'), stats.max_sales
 ORDER BY m
 ```
+|m                                          |sales|ratio_from_max    |
+|-------------------------------------------|-----|------------------|
+|2011-01-01                                 |139568438|0.6463141781486311|
+|2011-02-01                                 |119880374|0.5551425989159564|
+|2011-03-01                                 |109971888|0.5092583354137223|
+
 
 ## テーブル同士を結合する節
 UNION節は，テーブルとテーブルを縦にくっつける役割を果たします。
@@ -75,6 +108,15 @@ SELECT number1 FROM ( VALUES 1,2,3 ) AS t(number1)
 UNION ALL
 SELECT number2 FROM ( VALUES 1,3,5 ) AS t(number2)
 ```
+|number1                                    |
+|-------------------------------------------|
+|1                                          |
+|2                                          |
+|3                                          |
+|1                                          |
+|3                                          |
+|5                                          |
+
 
 UNION ALLは，挟まれた前後の2つのSELECT文の結果を縦にそのままつなげます。テーブル名の違いは1番目の名前に吸収されますが，以下のように型が異なれば同じカラムには収まりません。
 
@@ -113,6 +155,15 @@ SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alp
 UNION ALL
 SELECT number, alphabet FROM ( VALUES (1,'a'),(3,'c'),(5,'d') ) AS t(number, alphabet)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+|2                                          |b       |
+|3                                          |c       |
+|1                                          |a       |
+|3                                          |c       |
+|5                                          |d       |
+
 
 ### UNION
 
@@ -123,6 +174,13 @@ SELECT number1 FROM ( VALUES 1,2,3 ) AS t(number1)
 UNION
 SELECT number2 FROM ( VALUES 1,3,5 ) AS t(number2)
 ```
+|number1                                    |
+|-------------------------------------------|
+|5                                          |
+|1                                          |
+|3                                          |
+|2                                          |
+
 
 複数の列構成では，SELECT節で列挙されたすべてのカラムの組合せの値が一致する場合が重複とみなされます。
 
@@ -131,6 +189,14 @@ SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alp
 UNION
 SELECT number, alphabet FROM ( VALUES (1,'a'),(3,'d'),(5,'e') ) AS t(number, alphabet)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|2                                          |b       |
+|3                                          |c       |
+|3                                          |d       |
+|5                                          |e       |
+|1                                          |a       |
+
 
 ### INTERSECT
 
@@ -141,12 +207,21 @@ SELECT number1 FROM ( VALUES 1,2,3 ) AS t(number1)
 INTERSECT
 SELECT number2 FROM ( VALUES 1,3,5 ) AS t(number2)
 ```
+|number1                                    |
+|-------------------------------------------|
+|1                                          |
+|3                                          |
+
 
 ```sql
 SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alphabet)
 INTERSECT
 SELECT number, alphabet FROM ( VALUES (1,'a'),(3,'d'),(5,'e') ) AS t(number, alphabet)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|1                                          |a       |
+
 
 ### EXCEPT
 
@@ -156,21 +231,42 @@ SELECT number1 FROM ( VALUES 1,2,3 ) AS t(number1)
 EXCEPT
 SELECT number2 FROM ( VALUES 1,3,5 ) AS t(number2)
 ```
+|number1                                    |
+|-------------------------------------------|
+|2                                          |
+
+
 ```sql
 SELECT number2 FROM ( VALUES 1,3,5 ) AS t(number2)
 EXCEPT
 SELECT number1 FROM ( VALUES 1,2,3 ) AS t(number1)
 ```
+|number2                                    |
+|-------------------------------------------|
+|5                                          |
+
+
 ```sql
 SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alphabet)
 EXCEPT
 SELECT number, alphabet FROM ( VALUES (1,'a'),(3,'d'),(5,'e') ) AS t(number, alphabet)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|2                                          |b       |
+|3                                          |c       |
+
+
 ```sql
 SELECT number, alphabet FROM ( VALUES (1,'a'),(3,'d'),(5,'e') ) AS t(number, alphabet)
 EXCEPT
 SELECT number, alphabet FROM ( VALUES (1,'a'),(2,'b'),(3,'c') ) AS t(number, alphabet)
 ```
+|number                                     |alphabet|
+|-------------------------------------------|--------|
+|5                                          |e       |
+|3                                          |d       |
+
 
 ## GROUPING SETS，CUBE，ROLLUP
 
