@@ -119,6 +119,10 @@ SELECT
   NONE_MATCH( list, x -> x>=10 ) AS none1
 FROM list_table
 ```
+|all1                                       |all2 |any1|any2|none1|
+|-------------------------------------------|-----|----|----|-----|
+|true                                       |false|true|true|true |
+
 
 ```sql
 WITH list_table AS
@@ -130,6 +134,10 @@ SELECT
   NONE_MATCH( list, x -> x>=10 ) AS none1
 FROM list_table
 ```
+|all1                                       |all2 |any1|any2|none1|
+|-------------------------------------------|-----|----|----|-----|
+|NULL                                       |false|NULL|true|NULL |
+
 
 ### ARRAY_DISTINCT(x) → array
 与えられたLISTの重複する要素を取り除いてユニークな要素のLISTを返します。NULLも他の要素と同じように扱われ重複が取り除かれます。
@@ -142,6 +150,10 @@ SELECT
   list, ARRAY_DISTINCT(list) AS uniq_list
 FROM list_table
 ```
+|list                                       |uniq_list|
+|-------------------------------------------|---------|
+|[1, 1, 2, 2, 3, NULL, NULL]                |[1, 2, 3, NULL]|
+
 
 ### ARRAY_JOIN(x, delimiter, null_replacement) → varchar
 LISTの要素を指定した区切り文字で結合して文字列にします。NULLの要素に対する代替を指定することができます。そのためのnull_replacementオプションを使用しないと，NULLがある場合に区切り文字が残ってしまう結果になることがあります。
@@ -154,6 +166,10 @@ SELECT
   ARRAY_JOIN(list,' - ') AS joined_str1, ARRAY_JOIN(list,' - ','0') AS joined_str2, ARRAY_JOIN(list,' - ','') AS joined_str3
 FROM list_table
 ```
+|joined_str1                                |joined_str2|joined_str3           |
+|-------------------------------------------|-----------|----------------------|
+|1 - 2 - 2 - 3 -                            |0 - 1 - 2 - 2 - 0 - 3 - 0| - 1 - 2 - 2 -  - 3 - |
+
 
 ### ARRAY_MAX(x) → x
 LISTの要素の最大値を返します。
@@ -169,6 +185,10 @@ SELECT
   ARRAY_MAX(list) AS elm_max, ARRAY_MIN(list) AS elm_min
 FROM list_table
 ```
+|elm_max                                    |elm_min|
+|-------------------------------------------|-------|
+|5                                          |1      |
+
 
 ARRAY_MAXやARRAY_MIN関数は，LISTの要素にNULLが含まれると台無しになってしまいます。
 
@@ -180,6 +200,10 @@ SELECT
   ARRAY_MAX(list) AS elm_max, ARRAY_MIN(list) AS elm_min
 FROM list_table
 ```
+|elm_max                                    |elm_min|
+|-------------------------------------------|-------|
+|NULL                                       |NULL   |
+
 
 ### ARRAY_REMOVE(x, element) → array
 
@@ -188,6 +212,10 @@ FROM list_table
 ```sql
 SELECT ARRAY_REMOVE( ARRAY[NULL,1,2,NULL,3,4,5], 1 ) AS list
 ```
+|list                                       |
+|-------------------------------------------|
+|[NULL, 2, NULL, 3, 4, 5]                   |
+
 
 ### CONTAINS(x, element) → boolean
 第2引数に指定した要素がLISTに含まれるか否かを判定します。NULLを含むかどうかの判定には使えません。
@@ -199,6 +227,10 @@ WITH list_table AS
 SELECT CONTAINS(list,1), CONTAINS(list,NULL)
 FROM list_table
 ```
+|_col0                                      |_col1|
+|-------------------------------------------|-----|
+|true                                       |NULL |
+
 
 ### ARRAY_SORT(x) → array
 
@@ -207,6 +239,10 @@ LISTの要素を並び替えます。NULLは最後に配置されます。
 ```sql
 SELECT ARRAY_SORT(ARRAY[NULL,1,5,NULL,4,3,2]) AS list
 ```
+|list                                       |
+|-------------------------------------------|
+|[1, 2, 3, 4, 5, NULL, NULL]                |
+
 
 この関数には，Comparatorによるマニュアルな並び替えルールを適用できますが，ここでは割愛します。
 
@@ -216,6 +252,11 @@ LISTの要素数を返します。NULLの要素も数えられます。
 ```sql
 SELECT CARDINALITY(ARRAY[NULL,1,5,NULL,4,3,2]) AS size
 ```
+|size                                       |
+|-------------------------------------------|
+|7                                          |
+
+
 ### FILTER(array(T), function(T, boolean)) -> array(T)
 
 条件式をフィルターとしてLISTの要素を絞ります。
@@ -228,6 +269,10 @@ SELECT FILTER(list, x-> x IS NOT NULL) AS fil1,
        FILTER(list, x-> x%2=1) AS fil2
 FROM list_table
 ```
+|fil1                                       |fil2     |
+|-------------------------------------------|---------|
+|[1, 5, 4, 3, 2]                            |[1, 5, 3]|
+
 
 ### FLATTEN(x) → array
 
@@ -237,6 +282,10 @@ LISTの要素を平坦化します。
 SELECT FLATTEN(ARRAY[ ARRAY[1,2], ARRAY[3,4], ARRAY[5,6,7]])
 FROM ( VALUES 1 ) AS t(n)
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[1, 2, 3, 4, 5, 6, 7]                      |
+
 
 ### REVERSE(x) → array
 LISTの要素の順番を反転します。
@@ -251,11 +300,14 @@ LISTをスライスします。指定する開始インデックスは1からで
 WITH list_table AS
 ( SELECT ARRAY[1,2,3,NULL,4,5,6] AS list )
 
-SELECT TRANSFORM( list, x -> x+1 ) AS t1,
-       TRANSFORM( list, x -> COALESCE(x,0)+1 ) AS t2,
-       TRANSFORM( list, x -> 'elm_' || CAST(x AS VARCHAR) ) AS t3
+SELECT SLICE( list, 1, 4 )  AS slice1,
+       SLICE( list, -3, 3 ) AS slice2
 FROM list_table
 ```
+|slice1                                     |slice2               |
+|-------------------------------------------|---------------------|
+|[1, 2, 3, NULL]                            |[4, 5, 6]            |
+
 
 ### TRANSFORM(array(T), function(T, U)) -> array(U)
 
@@ -270,6 +322,10 @@ SELECT TRANSFORM( list, x -> x+1 ) AS t1,
        TRANSFORM( list, x -> 'elm_' || CAST(x AS VARCHAR) ) AS t3
 FROM list_table
 ```
+|t1                                         |t2                   |t3                                                         |
+|-------------------------------------------|---------------------|-----------------------------------------------------------|
+|[2, 3, 4, NULL, 5, 6, 7]                   |[2, 3, 4, 1, 5, 6, 7]|["elm_1", "elm_2", "elm_3", NULL, "elm_4", "elm_5", "elm_6"]|
+
 
 ### REDUCE(array(T), initialState S, inputFunction(S, T, S), outputFunction(S, R)) → R
 REDUCE関数は，要素を何らかのfunctionによって集約した1つの値（LISTではない数値や文字列など）を返す関数です。要素同士のfunctionの記述方法はラムダ式となります。また，初期値を指定する必要もあります。単純な算術平均でも，REDUCEで求めようとすると，それなりに複雑な記述になります。以下に，NULLを0に変換してから算術平均を求めるクエリを示します。
@@ -285,7 +341,12 @@ SELECT REDUCE( list, 0, (s,x)->s+x, s->s ) AS t1,
                s -> IF(s.count = 0, NULL, s.sum / s.count)) AS t3
 FROM list_table
 ```
-ちなみに，下記のようにLISTを行に展開したうえで普通の集約関数を使うほうが同様のことをわかりやすく記述できるのでおすすです。
+|t1                                         |t2                   |t3 |
+|-------------------------------------------|---------------------|---|
+|NULL                                       |21                   |3.0|
+
+
+ちなみに，下記のようにLISTを行に展開したうえで普通の集約関数を使うほうが同様のことをわかりやすく記述できるのでおすすめです。
 
 ```sql
 WITH list_table AS
@@ -295,6 +356,10 @@ SELECT AVG(COALESCE(x,0))
 FROM list_table
 CROSS JOIN UNNEST(list) AS t(x)
 ```
+|_col0                                      |
+|-------------------------------------------|
+|3.0                                        |
+
 
 ## 2つ以上のLISTに関する関数
 
@@ -307,6 +372,10 @@ SELECT ARRAY_EXCEPT(
   ARRAY [1,3,5,7]
 )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[2, 4, 6]                                  |
+
 
 ### ARRAY_INTERSECT(x, y) → array
 LIST xの要素とLIST yの要素の共通部分を取り出します。さらに，選ばれた要素は重複が取り除かれます。
@@ -317,6 +386,10 @@ SELECT ARRAY_INTERSECT(
   ARRAY [1,3,5,7]
 )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[1, 3, 5]                                  |
+
 
 ### ARRAY_UNION(x, y) → array
 LIST xかLIST yのいずれかに含まれる要素を取り出します。さらに，選ばれた要素は重複が取り除かれます。
@@ -326,6 +399,10 @@ SELECT ARRAY_UNION(
   ARRAY [1,3,5,7]
 )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[1, 2, 3, 4, 5, 6, 7]                      |
+
 
 ### ARRAYS_OVERLAP(x, y) → boolean
 LIST xとLIST yにNULL以外の共通要素があるか判定します。1つでも共通部分があればTRUE，そうでなければFALSEを返しますが，共通部分がなく片方にNULLが含まれるならNULLを返してしまうことに注意が必要です。
@@ -352,6 +429,10 @@ SELECT
     ARRAY [NULL,4,5,6]
   ) AS ol5
 ```
+|ol1                                        |ol2  |ol3 |ol4 |ol5 |
+|-------------------------------------------|-----|----|----|----|
+|true                                       |false|true|NULL|NULL|
+
 
 ### CONCAT(array1, array2, ..., arrayN) → array
 複数のLISTを連結して，（入れ子でない）LISTを返します。この関数は「||」でも記述可能です。要素の重複などは考慮されず，単純に左側に指定したLISTの要素から順に並べられます。
@@ -361,6 +442,10 @@ SELECT
   ARRAY[1,2,3]||ARRAY[2,3,4]||ARRAY[NULL,0],
   CONCAT(ARRAY[1,2,3],ARRAY[2,3,4],ARRAY[NULL,0])
 ```
+|_col0                                      |_col1|
+|-------------------------------------------|-----|
+|[1, 2, 3, 2, 3, 4, NULL, 0]                |[1, 2, 3, 2, 3, 4, NULL, 0]|
+
 
 ### ZIP(array1, array2[, ...]) -> array(row)
 複数のLISTの同じ位置の要素をペアリングし，行にして返します。要素が足りない場合はNULLが補完されます。
@@ -372,6 +457,10 @@ SELECT
     ARRAY[1,2]
   )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[["A", "a", 1], ["B", "b", 2], ["C", "c", NULL]]|
+
 
 ZIP関数の結果はUNNESTを使うことによってきれいに行と列に展開できます。
 
@@ -383,6 +472,12 @@ SELECT c1, c2, c3
 FROM zip_table
 CROSS JOIN UNNEST(z) AS t(c1,c2,c3)
 ```
+|c1                                         |c2 |c3 |
+|-------------------------------------------|---|---|
+|A                                          |a  |1  |
+|B                                          |b  |2  |
+|C                                          |c  |NULL|
+
 
 ### ZIP_WITH(array(T), array(U), function(T, U, R)) -> array(R)
 
@@ -394,6 +489,10 @@ SELECT
   ZIP_WITH( ARRAY['A','B','C'], ARRAY['a','b'], (x,y)->x||y ),
   ZIP_WITH( ARRAY[1,2,3], ARRAY[3,2], (x,y)->x+y )
 ```
+|_col0                                      |_col1|_col2|
+|-------------------------------------------|-----|-----|
+|[["a", "A"], ["b", "B"], ["c", "C"]]       |["Aa", "Bb", NULL]|[4, 4, NULL]|
+
 
 上記の1つ目の結果をUNNESTでテーブルに展開してみましょう。
 
@@ -406,6 +505,12 @@ SELECT c1,c2
 FROM zip_table
 CROSS JOIN UNNEST(z) AS t(c1,c2)
 ```
+|c1                                         |c2 |
+|-------------------------------------------|---|
+|a                                          |A  |
+|b                                          |B  |
+|c                                          |C  |
+
 
 ## MAPの作り方
 MAPはkeyとvalueのペアが1つの要素として格納されるLISTと似たものですが，インデックスで要素を取り出していたLISTに対し，MAPではkeyを指定して要素のvalueを取り出します。
