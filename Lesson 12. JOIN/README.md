@@ -665,9 +665,8 @@ WHERE members.member_id IS NULL OR smartphones.goods_id IS NULL
 ```
 |receit_id                                  |member_id|mail                     |gender|age|goods_id              |os    |goods_name        |price|
 |-------------------------------------------|---------|-------------------------|------|---|----------------------|------|------------------|-----|
-|6                                          |member05 |                         |      |   |4                     |android|HUAWEI Mate 20 Pro|79200|
-|7                                          |member02 |akiyama_hiromasa@example.com|m     |33 |                      |      |                  |     |
-
+|6                                          |member05 |NULL                         |NULL      |NULL   |4                     |android|HUAWEI Mate 20 Pro|79200|
+|7                                          |member02 |akiyama_hiromasa@example.com|m     |33 |NULL                      |NULL      |NULL                  |NULL     |
 
 ### マスタデータがLEFT TABLEとなるケース
 INNER JOINの説明では，時系列データがLEFT TABLE（JOINの前に書く），マスタデータがRIGHT TABLE（JOINの後に書く）と説明しましたが，特殊な目的においてはマスタデータがLEFT TABLEになることがあります。それは，単純な入れ替えではなく，「マスタデータと（集計した）時系列データを結合する」場合です。
