@@ -24,6 +24,12 @@ SELECT val, ROW_NUMBER()OVER(ORDER BY val) AS rnk
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY rnk ASC
 ```
+|val                                        |rnk|
+|-------------------------------------------|---|
+|1                                          |1  |
+|1                                          |2  |
+|2                                          |3  |
+|3                                          |4  |
 
 #### 例：ユーザーごとに，最初のアクセスから順にレコードに番号を割り振る
 指定した2ユーザーに対してtime順（最初のアクセス順）に番号を割り振るという，ROW_NUMBERの基本的な使い方を紹介します。
@@ -39,6 +45,12 @@ FROM
 WHERE td_client_id IN ('f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a','7f47d05f-bd12-4553-e69c-763064738631')
 ORDER BY td_client_id, rnk ASC
 ```
+|rnk                                        |td_client_id|time      |
+|-------------------------------------------|------------|----------|
+|1                                          |7f47d05f-bd12-4553-e69c-763064738631|1465180893|
+|2                                          |7f47d05f-bd12-4553-e69c-763064738631|1465181876|
+|3                                          |7f47d05f-bd12-4553-e69c-763064738631|1465181995|
+
 
 #### 例：ユーザーごとの直帰のアクティビティを知るために，各ユーザーの最新の5レコードを取得する
 ROW_NUMBERは区間ごとに一意の番号を割り振ることから，「区間ごとに先頭の5件を取得する」といった操作が容易にできます。
@@ -54,6 +66,19 @@ WHERE rnk<=5
 AND td_client_id IN ('f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a','7f47d05f-bd12-4553-e69c-763064738631')
 ORDER BY td_client_id, rnk
 ```
+|rnk                                        |td_client_id|time      |
+|-------------------------------------------|------------|----------|
+|1                                          |7f47d05f-bd12-4553-e69c-763064738631|1467694887|
+|2                                          |7f47d05f-bd12-4553-e69c-763064738631|1467694610|
+|3                                          |7f47d05f-bd12-4553-e69c-763064738631|1467694548|
+|4                                          |7f47d05f-bd12-4553-e69c-763064738631|1467694418|
+|5                                          |7f47d05f-bd12-4553-e69c-763064738631|1467694247|
+|1                                          |f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1465171459|
+|2                                          |f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1465171440|
+|3                                          |f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464935509|
+|4                                          |f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464935376|
+|5                                          |f4d99634-4f1f-4e01-8d7f-9cd0a4a6613a|1464930080|
+
 
 ### RANK：ランキング（同率で番号を飛ばす）
 RANK関数は，区間ごとに順序付けされたレコードに対して上から順に行番号を割り振っていきます。複数のレコードが同値であった場合は同じ番号を付与し，その次の値からは番号を飛ばします。例えば1位が3件あった場合，RANKは「1,1,1,4,5,6,...」という順序付けを行います。
@@ -63,6 +88,13 @@ SELECT val, RANK()OVER(ORDER BY val) AS rnk
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY rnk ASC
 ```
+|val                                        |rnk|
+|-------------------------------------------|---|
+|1                                          |1  |
+|1                                          |1  |
+|2                                          |3  |
+|3                                          |4  |
+
 
 #### 例：カテゴリごとの2011年度マンスリートップセールス5品目を取得する
 ECにおける各カテゴリのマンスリーでの売上品目上位を，12ヶ月分，一度に集計します。
@@ -84,6 +116,19 @@ FROM
 WHERE rnk<=5
 ORDER BY category, d, rnk
 ```
+|d                                          |rnk|category                 |sales |sub_category                    |goods_id|
+|-------------------------------------------|---|-------------------------|------|--------------------------------|--------|
+|2011-01-01                                 |1  |Automotive and Industrial|647020|Automotive Tools and Equipment  |470556  |
+|2011-01-01                                 |2  |Automotive and Industrial|640679|Tires and Wheels                |468960  |
+|2011-01-01                                 |3  |Automotive and Industrial|539167|Janitorial                      |475544  |
+|2011-01-01                                 |4  |Automotive and Industrial|285524|Tires and Wheels                |477514  |
+|2011-01-01                                 |5  |Automotive and Industrial|228348|Industrial Supplies             |469338  |
+|2011-02-01                                 |1  |Automotive and Industrial|758096|Automotive Parts and Accessories|480895  |
+|2011-02-01                                 |2  |Automotive and Industrial|321751|Automotive Parts and Accessories|481083  |
+|2011-02-01                                 |3  |Automotive and Industrial|245344|Lab and Scientific              |480337  |
+|2011-02-01                                 |4  |Automotive and Industrial|184801|Automotive Tools and Equipment  |481366  |
+|2011-02-01                                 |5  |Automotive and Industrial|175812|Motorcycle and Powersports      |481275  |
+
 
 #### DENSE_RANK：ランキング（同率で番号を飛ばさない）
 DENSE_RANK関数は，RANK関数と挙動が似ていますが，RANKが複数の同値があった場合には次の値の番号を飛ばすのに対し，DENSE_RANKは番号を飛ばしません。例えば1位が3件あった場合，DENSE_RANKは「1,1,1,2,3,4,...」という順序付けを行います。
@@ -93,6 +138,13 @@ SELECT val, DENSE_RANK()OVER(ORDER BY val) AS rnk
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY rnk ASC
 ```
+|val                                        |rnk|
+|-------------------------------------------|---|
+|1                                          |1  |
+|1                                          |1  |
+|2                                          |2  |
+|3                                          |3  |
+
 
 #### 例：カテゴリごとのマンスリートップセールス5品目を取得する
 ECにおける各カテゴリのマンスリーでの売上品目上位を集計します。同率で番号を飛ばさないので必ず1〜5までの番号があり，歯抜けはありません。
@@ -116,6 +168,18 @@ FROM
 WHERE rnk<=5
 ORDER BY category, d, rnk
 ```
+|d                                          |rnk|category                 |sales |sub_category                    |goods_id|
+|-------------------------------------------|---|-------------------------|------|--------------------------------|--------|
+|2011-01-01                                 |1  |Automotive and Industrial|647020|Automotive Tools and Equipment  |470556  |
+|2011-01-01                                 |2  |Automotive and Industrial|640679|Tires and Wheels                |468960  |
+|2011-01-01                                 |3  |Automotive and Industrial|539167|Janitorial                      |475544  |
+|2011-01-01                                 |4  |Automotive and Industrial|285524|Tires and Wheels                |477514  |
+|2011-01-01                                 |5  |Automotive and Industrial|228348|Industrial Supplies             |469338  |
+|2011-02-01                                 |1  |Automotive and Industrial|758096|Automotive Parts and Accessories|480895  |
+|2011-02-01                                 |2  |Automotive and Industrial|321751|Automotive Parts and Accessories|481083  |
+|2011-02-01                                 |3  |Automotive and Industrial|245344|Lab and Scientific              |480337  |
+|2011-02-01                                 |4  |Automotive and Industrial|184801|Automotive Tools and Equipment  |481366  |
+|2011-02-01                                 |5  |Automotive and Industrial|175812|Motorcycle and Powersports      |481275  |
 
 ### PERCENT_RANK：ランキング（割合「(rank - 1) / (全行数 - 1)」で表示）
 PERCENT_RANK関数は，番号を割り振るのではなく，「(rank – 1) / (全行数 – 1)」という計算をして順位の割合を出します。
@@ -125,6 +189,13 @@ SELECT val, PERCENT_RANK()OVER(ORDER BY val) AS per_rnk
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY per_rnk ASC
 ```
+|val                                        |per_rnk|
+|-------------------------------------------|-------|
+|1                                          |0.0    |
+|1                                          |0.0    |
+|2                                          |0.6666666666666666|
+|3                                          |1.0    |
+
 
 #### 例：カテゴリごとにトップセールス10%に属する品目を取得する
 区間ごと（=カテゴリごと）の内訳数が異なるような場合に，各々の区間で「上位10%以内の品目」といった指定をします。区間ごとに得られるレコード数が異なる（品目数が多いカテゴリは上位10%の品目数も多くなる）ところが今までの例とは違うところです。
@@ -147,6 +218,12 @@ FROM
 WHERE rnk<=0.1
 ORDER BY category, d, rnk
 ```
+|d                                          |rnk|category                 |sales |sub_category                  |goods_id|
+|-------------------------------------------|---|-------------------------|------|------------------------------|--------|
+|2011-01-01                                 |0.0|Automotive and Industrial|647020|Automotive Tools and Equipment|470556  |
+|2011-01-01                                 |0.001763668430335097|Automotive and Industrial|640679|Tires and Wheels              |468960  |
+|2011-01-01                                 |0.003527336860670194|Automotive and Industrial|539167|Janitorial                    |475544  |
+
 
 ### CUME_DIST：ランキング（相対位置「(現在の行の位置) / (全行数)」で表示）
 CUME_DIST関数は，PERCENT_RANKとよく似ていますが，「(現在の行の位置) / (全行数)」という計算式で相対順位を求めます。
@@ -156,6 +233,13 @@ SELECT val, CUME_DIST()OVER(ORDER BY val) AS cume
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY cume ASC
 ```
+|val                                        |cume|
+|-------------------------------------------|----|
+|1                                          |0.5 |
+|1                                          |0.5 |
+|2                                          |0.75|
+|3                                          |1.0 |
+
 
 #### 例：カテゴリごとにトップセールス10%に属する品目を取得する
 
@@ -178,6 +262,12 @@ FROM
 WHERE rnk<=0.1
 ORDER BY category, d, rnk
 ```
+|d                                          |rnk|category                 |sales |sub_category                  |goods_id|
+|-------------------------------------------|---|-------------------------|------|------------------------------|--------|
+|2011-01-01                                 |0.0017605633802816902|Automotive and Industrial|647020|Automotive Tools and Equipment|470556  |
+|2011-01-01                                 |0.0035211267605633804|Automotive and Industrial|640679|Tires and Wheels              |468960  |
+|2011-01-01                                 |0.00528169014084507|Automotive and Industrial|539167|Janitorial                    |475544  |
+
 
 ### NTILE(N)：ランキング（1..Nに分割）
 
@@ -187,11 +277,27 @@ NTILE関数は，レコードを等しい間隔でタイルに分割します。
 SELECT val, NTILE(10)OVER(ORDER BY val) AS tile
 FROM ( VALUES 1,1,2,3 ) AS t(val)
 ORDER BY tile ASC
+```
+|val                                        |tile|
+|-------------------------------------------|----|
+|1                                          |1   |
+|1                                          |2   |
+|2                                          |3   |
+|3                                          |4   |
 
+```sql
 SELECT val, NTILE(3)OVER(ORDER BY val) AS tile
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY tile ASC
 ```
+|val                                        |tile|
+|-------------------------------------------|----|
+|1                                          |1   |
+|2                                          |1   |
+|3                                          |2   |
+|4                                          |2   |
+|5                                          |3   |
+
 
 #### 例：カテゴリごとのマンスリートップセールス100品目を取得し「1〜10位，11位〜20位，...，91位〜100位」という10品目ごとのバケットに分割する
 
@@ -214,6 +320,12 @@ FROM
 WHERE rnk <= 100
 ORDER BY category, d, rnk, bucket
 ```
+|d                                          |rnk|bucket|category                 |sales |sub_category                  |goods_id|
+|-------------------------------------------|---|------|-------------------------|------|------------------------------|--------|
+|2011-01-01                                 |1  |1     |Automotive and Industrial|647020|Automotive Tools and Equipment|470556  |
+|2011-01-01                                 |2  |1     |Automotive and Industrial|640679|Tires and Wheels              |468960  |
+|2011-01-01                                 |3  |1     |Automotive and Industrial|539167|Janitorial                    |475544  |
+
 
 ## 参照系
 
@@ -228,6 +340,13 @@ SELECT val, LAG(val,1)OVER(ORDER BY val) AS val_lag1
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_lag1|
+|-------------------------------------------|--------|
+|1                                          |        |
+|2                                          |1       |
+|3                                          |2       |
+|4                                          |3       |
+|5                                          |4       |
 
 #### 例：あるユーザーのアクセス日一覧に対して，前回のアクセス日を付与する
 
@@ -251,6 +370,12 @@ FROM
 )
 ORDER BY td_client_id, rnk, d DESC, d_lag DESC
 ```
+|rnk                                        |td_client_id|d         |d_lag     |
+|-------------------------------------------|------------|----------|----------|
+|1                                          |10e725fc-c17f-43e1-da24-a452ef19d2f5|2016-04-25|          |
+|2                                          |10e725fc-c17f-43e1-da24-a452ef19d2f5|2016-04-26|2016-04-25|
+|3                                          |10e725fc-c17f-43e1-da24-a452ef19d2f5|2016-04-29|2016-04-26|
+
 
 上記の結果は，ある1人のユーザーのアクセス日を，初回アクセス日を1として順に番号を割り振りつつ，各レコードに前回のアクセス日の情報を付与して番号順に並べたものです。
 初回にアクセスした「2016-04-25」については，前の日付が存在しないためLAGが取得できず，NULLが返っています（LAGの第3引数で，存在しない場合の既定値を設定できます）。
@@ -274,6 +399,12 @@ WHERE d = '2016-06-16' AND d_lag IS NOT NULL
 GROUP BY d, d_lag
 ORDER BY d DESC, d_lag DESC
 ```
+|d                                          |d_lag|cnt       |
+|-------------------------------------------|-----|----------|
+|2016-06-16                                 |2016-06-15|52        |
+|2016-06-16                                 |2016-06-14|12        |
+|2016-06-16                                 |2016-06-13|15        |
+
 
 この結果から，このデータでは前日にアクセスしている人が最も多く，3日以内前にアクセスしている人が全体の大きな割合を占めていることを示しています。
 
@@ -285,6 +416,14 @@ SELECT val, LEAD(val,1)OVER(ORDER BY val) AS val_lead1
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_lead1|
+|-------------------------------------------|---------|
+|1                                          |2        |
+|2                                          |3        |
+|3                                          |4        |
+|4                                          |5        |
+|5                                          |NULL     |
+
 
 #### 例：ページの平均閲覧時間を求める
 ユーザーごとに閲覧したURLが時系列に並んだレコードで，1つ後ろの行のtimeを見ることができれば，そのURLが見られていた時間の長さを知ることができます。LEAD関数を利用して各レコードごとにその値を求め，各URL（正規化済み）について平均を取れば，そのページの平均閲覧時間を知ることができます。
@@ -296,6 +435,12 @@ SELECT td_client_id,
 FROM sample_accesslog
 ORDER BY td_client_id, time
 ```
+|td_client_id                               |td_url|time      |diff|
+|-------------------------------------------|------|----------|----|
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp|1461454040|17  |
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp/about|1461454057|85  |
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp/careers|1461454142|24  |
+
 閲覧時間（diff）がNULLとなっているのは，そのユーザーの最終アクセスレコードで次のレコードがないためです。これは排除しておきたいですね。
 また，閲覧時間がとても大きくなっているのは，そのレコードに該当する閲覧でユーザーがサイトの回遊を止め，数時間や数日後に再びそのURLにアクセスしたためです。このようなケースは意味がある閲覧時間を表していないため除外する必要があります。ここでは，セッションを30分として，閲覧時間が30分以上のレコードを排除することにします。
 ```sql
@@ -310,8 +455,16 @@ FROM
 WHERE diff <= 60*30 AND diff IS NOT NULL
 ORDER BY td_client_id, time
 ```
+|td_client_id                               |td_url|time      |diff|
+|-------------------------------------------|------|----------|----|
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp|1461454040|17  |
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp/about|1461454057|85  |
+|000077fb-2c93-4cd7-d9d0-293866aaec31       |www.treasuredata.com/jp/careers|1461454142|24  |
+
+
 ここで，WHERE節（およびHAVING節）では集計関数のように直接SELECT節のWindow関数を載せることができません。一度サブクエリで包んであげて，外側からWHERE節を書いてあげる必要がある点に注意してください。
 上記の結果に対し，URLごとに平均を取ってあげれば，平均閲覧時間が求められます。その上位10件を見てみましょう。ただし，10件以上のレコード数がないURLは，サンプル数が少ないとして集計から除外とします。
+
 ```sql
 SELECT td_url, AVG(diff) AS avg_diff, COUNT(1) AS cnt
 FROM
@@ -326,6 +479,12 @@ GROUP BY td_url
 HAVING 10 <= COUNT(1)
 ORDER BY avg_diff DESC
 ```
+|td_url                                     |avg_diff|cnt       |
+|-------------------------------------------|--------|----------|
+|www.treasuredata.com/jp/press_release/20151014_private_dmp_rightsegment_cyberagent|521.9090909090909|11        |
+|www.treasuredata.com/jp/thank_you          |369.6969696969697|33        |
+|192.168.33.10:3000/jp/inboundmarketing     |367.6666666666667|48        |
+
 
 ### FIRST_VALUE：最初の行の値を返す
 FIRST_VALUE関数は，並び替えられた各区間の最初の行の値を返します。
@@ -335,6 +494,14 @@ SELECT val, FIRST_VALUE(val)OVER(ORDER BY val) AS val_first
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_first|
+|-------------------------------------------|---------|
+|1                                          |1        |
+|2                                          |1        |
+|3                                          |1        |
+|4                                          |1        |
+|5                                          |1        |
+
 
 #### 例：マンスリーの各グッズの売上について，そのカテゴリでトップの売上額に対する割合を求める（各カテゴリ上位5件まで）
 
@@ -359,6 +526,11 @@ FROM
 WHERE rnk <= 5
 ORDER BY m, category, ratio DESC
 ```
+|m                                          |category|rnk|goods_id|sales |best_goods_id|best_sales|ratio             |
+|-------------------------------------------|--------|---|--------|------|-------------|----------|------------------|
+|2011-01-01                                 |Automotive and Industrial|1  |470556  |647020|470556       |647020    |1.0               |
+|2011-01-01                                 |Automotive and Industrial|2  |468960  |640679|470556       |647020    |0.9901996847083552|
+|2011-01-01                                 |Automotive and Industrial|3  |475544  |539167|470556       |647020    |0.8333080893944546|
 
 ### LAST_VALUE：最後の行の値を返す
 LAST_VALUE関数は，並び替えられた各区間の最後の行の値を返します。
@@ -368,6 +540,15 @@ SELECT val, LAST_VALUE(val)OVER(ORDER BY val) AS val_last
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_last|
+|-------------------------------------------|--------|
+|1                                          |1       |
+|2                                          |2       |
+|3                                          |3       |
+|4                                          |4       |
+|5                                          |5       |
+
+
 上記のクエリでは，並び替えられた区間の先頭から現在の行（自己の値）のレコードしか見ません。この範囲における最後の値は常に「自己の値」となってしまいます。（後述するNTH_VALUEでも同様です。）
 そこで，以下の例のように区間の範囲を指定してこれを回避します。区間内のすべてのレコードを範囲とすれば，その区間内の最後の値が取得できます。
 ```sql
@@ -375,6 +556,14 @@ SELECT val, LAST_VALUE(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AN
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_last|
+|-------------------------------------------|--------|
+|1                                          |5       |
+|2                                          |5       |
+|3                                          |5       |
+|4                                          |5       |
+|5                                          |5       |
+
 サンプルデータでもこの挙動の違いを確認してみましょう。ここでは，FIRST_VALUE関数の例と同じような結果を得ることを目的とします。まずは間違った例を紹介します。FIRST_VALUEの例では単純に降順に並び替えて先頭を取ったので，同じように考えて，昇順に並び替えて最後を取る以下のようなクエリを思い浮かべるかもしれません。
 ```sql
 WITH sales_table AS
@@ -397,6 +586,13 @@ FROM
 WHERE rnk <= 5
 ORDER BY m, category, ratio DESC
 ```
+|m                                          |category|rnk|goods_id|sales |best_goods_id|best_sales|ratio|
+|-------------------------------------------|--------|---|--------|------|-------------|----------|-----|
+|2011-01-01                                 |Automotive and Industrial|2  |468960  |640679|468960       |640679    |1.0  |
+|2011-01-01                                 |Automotive and Industrial|1  |470556  |647020|470556       |647020    |1.0  |
+|2011-01-01                                 |Automotive and Industrial|3  |475544  |539167|475544       |539167    |1.0  |
+
+
 しかし，残念ながら下記のように間違った（常に自身のsalesとbest_salesが同じ値）結果が得られてしまいます。
 
 正解のクエリは次のように書きます。ROWSによる範囲指定を追加していることに注目してください。
@@ -422,6 +618,12 @@ FROM
 WHERE rnk <= 5
 ORDER BY m, category, ratio DESC
 ```
+|m                                          |category|rnk|goods_id|sales |best_goods_id|best_sales|ratio|
+|-------------------------------------------|--------|---|--------|------|-------------|----------|-----|
+|2011-01-01                                 |Automotive and Industrial|1  |470556  |647020|470556       |647020    |1.0  |
+|2011-01-01                                 |Automotive and Industrial|2  |468960  |640679|470556       |647020    |0.9901996847083552|
+|2011-01-01                                 |Automotive and Industrial|3  |475544  |539167|470556       |647020    |0.8333080893944546|
+
 
 特に参照系のWindow関数で注意したいこととして，デフォルトでは，各レコードをPARTITIONED BYで区切りORDER BYで並び替えた区間において，すべての範囲のレコードを見られるような設定にはなっていません。明示的にROWSを記述しない限り，以下の範囲しか見られません。
 ```sql
@@ -443,6 +645,14 @@ SELECT val, NTH_VALUE(val,3)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING A
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_nth|
+|-------------------------------------------|-------|
+|1                                          |3      |
+|2                                          |3      |
+|3                                          |3      |
+|4                                          |3      |
+|5                                          |3      |
+
 
 #### 例：マンスリーの各グッズの売上に関して，そのカテゴリでトップの売上額に対する割合を求める（各カテゴリ上位5件まで）
 NTH_VALUEの引数（何番目の行の値を返すか）を1に指定すれば，FIRST_VALUEを代用できます。
@@ -468,7 +678,12 @@ FROM
 WHERE rnk <= 5
 ORDER BY m, category, ratio DESC
 ```
-結果は省略します。
+|m                                          |category|rnk|goods_id|sales |best_goods_id|best_sales|ratio             |
+|-------------------------------------------|--------|---|--------|------|-------------|----------|------------------|
+|2011-01-01                                 |Automotive and Industrial|1  |470556  |647020|470556       |647020    |1.0               |
+|2011-01-01                                 |Automotive and Industrial|2  |468960  |640679|470556       |647020    |0.9901996847083552|
+|2011-01-01                                 |Automotive and Industrial|3  |475544  |539167|470556       |647020    |0.8333080893944546|
+
 ちなみに，行の最後の値が何番目かは一般にわからないので，NTH_VALUE でLAST_VALUEの代用はできません。
 
 ## 集約関数系
@@ -480,21 +695,21 @@ Window関数の枠組みの中でも集約関数を利用できます。ただ�
 「ROWS...BETWEEN」句の書き方のパターンは以下の説明を参照してください。
 ### ROWS BETWEENパターン
 - ROWS BETWEEN m PRECEDING AND n FOLLOWING
-  - ：自己レコードに対して「m個前」から「n個先」までの範囲を指定します。
+  - 自己レコードに対して「m個前」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND n FOLLOWING
-  - ：自己レコードに対して「前すべて」から「n個先」までの範囲を指定します。
+  - 自己レコードに対して「前すべて」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN m PRECEDING AND UNBOUNDED FOLLOWING
-  - ：自己レコードに対して「m個前」から「先すべて」までの範囲を指定します。
+  - 自己レコードに対して「m個前」から「先すべて」までの範囲を指定します。
 - ROWS BETWEEN m PRECEDING AND CURRENT ROW
-  - ：自己レコードに対して「m個前」から「自己」までの範囲を指定します。
+  - 自己レコードに対して「m個前」から「自己」までの範囲を指定します。
 - ROWS BETWEEN CURRENT ROW AND n FOLLOWING
-  - ：自己レコードに対して「自己」から「n個先」までの範囲を指定します。
+  - 自己レコードに対して「自己」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-  - ：自己レコードに対して「前すべて」から「自己」までの範囲を指定します。これがデフォルトの範囲です。
+  - 自己レコードに対して「前すべて」から「自己」までの範囲を指定します。これがデフォルトの範囲です。
 - ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-  - ：自己レコードに対して「自己」から「先すべて」までの範囲を指定します。
+  - 自己レコードに対して「自己」から「先すべて」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-  - ：自己レコードに対して「前すべて」から「先すべて」までの範囲を指定します。
+  - 自己レコードに対して「前すべて」から「先すべて」までの範囲を指定します。
 
 ### ROWSとRANGEの違い
 ここで重要な注意点を述べます。多くのドキュメントなどでは，ROWSではなくRANGEが使われている場合があります。（例：RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW）
@@ -508,22 +723,48 @@ Window関数の枠組みの中でも集約関数を利用できます。ただ�
 
 Window関数で集約関数が用いられることが多いのは，時系列データを扱う場合です。RUNNING SUM（累計和）やMOVING AVERAGE（移動平均）がその代表例です。ただし，これらの名前が付いた関数は存在しないことに注意してください。すべての集約関数はOVER節を付けることによってWindow関数にできます。以下に最も単純な例を示します。
 ```sql
-SELECT val, SUM(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_sum --RANGEは省略可能
+SELECT val, SUM(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_sum --ROWSは省略可能
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |run_sum|
+|-------------------------------------------|-------|
+|1                                          |1      |
+|2                                          |3      |
+|3                                          |6      |
+|4                                          |10     |
+|5                                          |15     |
+
+
 注意点として，同順のレコードが生じた場合には重複分だけ和が取られます。つまり，同順のレコードが並ぶ場合，最後の累積和の値が平等に付与されます。これは累積和の特性ではなく，「ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW」と記述することによるものです。
 ```sql
-SELECT val, SUM(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_sum --RANGEは省略可能
+SELECT val, SUM(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_sum --ROWSは省略可能
 FROM ( VALUES 1,2,2,2,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |run_sum|
+|-------------------------------------------|-------|
+|1                                          |1      |
+|2                                          |3      |
+|2                                          |5      |
+|2                                          |7      |
+|5                                          |12     |
+
 ROWSの書き方を「自身より3つ前まで」となるようにすると，これはMOVING SUM（移動和）となります。
 ```sql
 SELECT val, SUM(val)OVER(ORDER BY val ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS moving_avg
 FROM ( VALUES 1,2,2,2,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |moving_avg|
+|-------------------------------------------|----------|
+|1                                          |1         |
+|2                                          |3         |
+|2                                          |5         |
+|2                                          |7         |
+|5                                          |11        |
+
+
 この場合の同順のレコードの扱いは先程とは異なります。今度はROWS BETWEEN 3 PRECEDINGの制約が強く働き，同順でもレコードの並びによって値が異なってきます。
 
 #### 例：categoryごとに，各日の売上額と併せて月初から当日までの累計和を表示する
@@ -543,6 +784,17 @@ SELECT d, m_from, category, sales,
 FROM sales_table
 ORDER BY category, d, m_from
 ```
+|d                                          |m_from|category                 |sales |sales_running_sum|
+|-------------------------------------------|------|-------------------------|------|-----------------|
+|2011-01-01                                 |2011-01-01|Automotive and Industrial|136540|136540           |
+|2011-01-02                                 |2011-01-01|Automotive and Industrial|264154|400694           |
+|...                                        |      |                         |      |                 |
+|2011-01-30                                 |2011-01-01|Automotive and Industrial|406599|12285233         |
+|2011-01-31                                 |2011-01-01|Automotive and Industrial|249250|12534483         |
+|2011-02-01                                 |2011-02-01|Automotive and Industrial|580275|580275           |
+|2011-02-02                                 |2011-02-01|Automotive and Industrial|409995|990270           |
+
+
 日ごとに月初からの売上が積み上がっており，かつ月が変わるとリセットされていることがわかります。
 
 ### MOVING AVERAGE：移動平均，nレコードの平均値を求める
@@ -552,12 +804,29 @@ ORDER BY category, d, m_from
 SELECT val, AVG(val)OVER(ORDER BY val ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) as moving_avg
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
+```
+|val                                        |moving_avg|
+|-------------------------------------------|----------|
+|1                                          |1.0       |
+|2                                          |1.5       |
+|3                                          |2.0       |
+|4                                          |2.5       |
+|5                                          |3.5       |
 
 ROWS BETWEEN 3 PRECEDINGの制約によって，同順でもレコードの並びが違えば異なる値になります。
+```SQL
 SELECT val, AVG(val)OVER(ORDER BY val ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) as moving_avg
 FROM ( VALUES 1,2,2,2,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |moving_avg|
+|-------------------------------------------|----------|
+|1                                          |1.0       |
+|2                                          |1.5       |
+|2                                          |1.6666666666666667|
+|2                                          |1.75      |
+|5                                          |2.75      |
+
 
 #### 例：cateogryごとに，各日の売上額と併せて直近5日間の移動平均を表示する
 ```sql
@@ -572,6 +841,15 @@ FROM
 ) t
 ORDER BY category, d
 ```
+|d                                          |category|sales |sales_moving_avg  |
+|-------------------------------------------|--------|------|------------------|
+|2011-01-01                                 |Automotive and Industrial|136540|136540.0          |
+|2011-01-02                                 |Automotive and Industrial|264154|200347.0          |
+|2011-01-03                                 |Automotive and Industrial|120338|173677.33333333334|
+|2011-01-04                                 |Automotive and Industrial|283688|201180.0          |
+|2011-01-05                                 |Automotive and Industrial|468996|254743.2          |
+
+
 もし過去4日分のレコードがない場合は，存在する過去分から現在値での平均が求められます。
 
 ### LOCAL MAX，MIN：特定の区間での最大，最小を求める
@@ -581,6 +859,14 @@ SELECT val, MAX(val)OVER(ORDER BY val ASC) AS local_max
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |local_max|
+|-------------------------------------------|---------|
+|1                                          |1        |
+|2                                          |2        |
+|3                                          |3        |
+|4                                          |4        |
+|5                                          |5        |
+
 
 現在の行までの最大を取ってくるので，LAST_VALUEと同様に意図しない結果になる可能性があります。これを避けるには範囲を指定して以下のように書きます。
 ```sql
@@ -588,12 +874,29 @@ SELECT val, MAX(val)OVER(ORDER BY val ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOU
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_max|
+|-------------------------------------------|-------|
+|1                                          |5      |
+|2                                          |5      |
+|3                                          |5      |
+|4                                          |5      |
+|5                                          |5      |
+
 ORDER BYを指定しなければ，範囲を意識しなくてもパーティション内の最大を求めることができます。
 ```sql
 SELECT val, MAX(val)OVER() AS val_max
 FROM ( VALUES 1,2,3,4,5 ) AS t(val)
 ORDER BY val ASC
 ```
+|val                                        |val_max|
+|-------------------------------------------|-------|
+|1                                          |5      |
+|2                                          |5      |
+|3                                          |5      |
+|4                                          |5      |
+|5                                          |5      |
+
+
 #### 例： category ごとに，月間の最大売上額/最小売上額を各々のレコードに付与する
 ```sql
 WITH sales_table AS
@@ -615,4 +918,13 @@ SELECT m, d, category, sales,
 FROM sales_table
 ORDER BY category, m, d, sales DESC
 ```
+|m                                          |d  |category                 |sales |max_sales|max_sales2|max_sales3|min_sales|min_sales2|min_sales3|
+|-------------------------------------------|---|-------------------------|------|---------|----------|----------|---------|----------|----------|
+|2011-01-01                                 |2011-01-01|Automotive and Industrial|136540|813518   |813518    |813518    |120338   |120338    |120338    |
+|2011-01-01                                 |2011-01-02|Automotive and Industrial|264154|813518   |813518    |813518    |120338   |120338    |120338    |
+|2011-01-01                                 |2011-01-03|Automotive and Industrial|120338|813518   |813518    |813518    |120338   |120338    |120338    |
+|...                                        |   |                         |      |         |          |          |         |          |          |
+|2011-01-01                                 |2011-01-28|Automotive and Industrial|343872|813518   |813518    |813518    |120338   |120338    |120338    |
+|2011-01-01                                 |2011-01-29|Automotive and Industrial|813518|813518   |813518    |813518    |120338   |120338    |120338    |
+
 1月のデイリーの売上の最大は1月29日，最小は1月3日となっています。
