@@ -526,6 +526,10 @@ WITH a1 AS
 SELECT MAP_AGG(k,v) AS mp
 FROM a1
 ```
+|mp                                         |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "c"=>NULL, "d"=>4, "e"=>5, "f"=>NULL}|
+
 
 MAPではkeyの重複が許されないので，元のレコードでkeyが重複している場合は注意してください。また，NULLのkeyは後で取り出せないので存在できません。
 
@@ -539,6 +543,10 @@ WITH a1 AS
 SELECT MAP_AGG(k,v) AS mp
 FROM a1
 ```
+|mp                                         |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "c"=>3}                   |
+
 
 ## 要素のNULLを除外する
 MAPの要素におけるNULLは，多くのMAP関数の挙動を歪めてしまうため，悪といえます。MAPを作成したり操作したりする場合には，NULLを除外した状態で扱うようにしましょう。
@@ -559,6 +567,10 @@ map_table AS
 )
 SELECT mp FROM map_table
 ```
+|mp                                         |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "d"=>4, "e"=>5}           |
+
 
 ## 方法2.（集約時）COALESCE関数でNULLの要素を置き換える
 NULLに意味があり，他の要素に置き換え可能ならば，COALESCE関数で置き換えるとよいでしょう。
@@ -575,6 +587,10 @@ map_table AS
 )
 SELECT mp FROM map_table
 ```
+|mp                                         |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "c"=>0, "d"=>4, "e"=>5, "f"=>0}|
+
 
 ## 方法3. MAP_FILTER関数で除外する
 既にMAPとなっている場合は，MAP_FILTER関数でNULLを除外できます。
@@ -585,6 +601,10 @@ WITH map_table AS
 SELECT MAP_FILTER( mp, (k,v) -> v IS NOT NULL ) AS list
 FROM map_table
 ```
+|list                                       |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "d"=>4, "e"=>5}           |
+
 
 ## MAPに関する関数
 
@@ -602,6 +622,10 @@ WITH map_table AS
 SELECT ELEMENT_AT( mp, 'a' ), ELEMENT_AT( mp, 'c' ), ELEMENT_AT( mp, 'g' )
 FROM map_table
 ```
+|_col0                                      |_col1|_col2|
+|-------------------------------------------|-----|-----|
+|1                                          |NULL |NULL |
+
 
 ### MAP(array(K), array(V)) -> map(K, V)
 
@@ -613,12 +637,20 @@ keyとvalueのペアを並べたLISTをMAPに変換します。
 ```sql
 SELECT MAP_FROM_ENTRIES( ARRAY[('a',1),('b',2),('c',NULL),('d',4),('e',5),('f',NULL)] )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "c"=>NULL, "d"=>4, "e"=>5, "f"=>NULL}|
+
 
 ### MAP_ENTRIES(map(K, V)) -> array(row(K, V))
 MAPを与えると，それをkeyとvalueのペアからなるLISTに変換します。
 ```sql
 SELECT MAP_ENTRIES( MAP(ARRAY['a','b','c','d','e','f'], ARRAY[1,2,NULL,4,5,NULL]) )
 ```
+|_col0                                      |
+|-------------------------------------------|
+|[["a", 1], ["b", 2], ["c", NULL], ["d", 4], ["e", 5], ["f", NULL]]|
+
 
 ### MAP_CONCAT(map1(K, V), map2(K, V), ..., mapN(K, V)) -> map(K, V)
 複数のMAPを連結します。MAPの連結には「||」が使えないので注意してください。keyが重複する場合には，いずれか1つに書き換えられます。
@@ -633,6 +665,11 @@ WITH map_table AS
 SELECT MAP_CONCAT(mp1,mp2)
 FROM map_table
 ```
+|_col0                                      |
+|-------------------------------------------|
+|{"a"=>1, "b"=>2, "c"=>5, "d"=>6, "e"=>7, "f"=>8}|
+
+
 ### MAP_FILTER(map(K, V), function(K, V, boolean)) -> map(K, V)
 
 ```sql
@@ -642,6 +679,10 @@ WITH map_table AS
 SELECT MAP_FILTER( mp, (k,v)-> v>=3 )
 FROM map_table
 ```
+|_col0                                      |
+|-------------------------------------------|
+|{"c"=>3, "d"=>4}                           |
+
 
 ### MAP_KEYS(x(K, V)), MAP_VALUES(x(K, V)) -> array(V)
 MAPのkeyまたはvalueだけをLISTとして返します。
@@ -653,6 +694,10 @@ WITH map_table AS
 SELECT MAP_KEYS(mp) AS keys, MAP_VALUES(mp) AS vals
 FROM map_table
 ```
+|keys                                       |vals            |
+|-------------------------------------------|----------------|
+|["a", "b", "c", "d"]                       |[1, NULL, 3, NULL]|
+
 
 ### MAP_ZIP_WITH(map(K, V1), map(K, V2), function(K, V1, V2, V3)) -> map(K, V3)
 
@@ -672,6 +717,10 @@ SELECT MAP_ZIP_WITH(mp1,mp2,(k,v1,v2)->v1+v2),
   MAP_ZIP_WITH(mp1,mp2,(k,v1,v2)->COALESCE(v1,0)+COALESCE(v2,0))
 FROM map_table
 ```
+|_col0                                      |_col1           |
+|-------------------------------------------|----------------|
+|{"a"=>NULL, "b"=>NULL, "c"=>NULL, "d"=>10, "e"=>NULL, "f"=>NULL}|{"a"=>1, "b"=>2, "c"=>5, "d"=>10, "e"=>7, "f"=>0}|
+
 
 ### TRANSFORM_KEYS(map(K1, V), function(K1, V, K2)) -> map(K2, V)
 key自身にfunctionを適用して新しいkeyとし，それを使ってMAPを再構築します。新しいkeyがNULLになる場合はエラーとなります。
@@ -684,6 +733,10 @@ SELECT TRANSFORM_KEYS(mp,(k,v)->COALESCE(v,0)),
        TRANSFORM_KEYS(mp,(k,v)->k||CAST(COALESCE(v,0) AS VARCHAR))
 FROM map_table
 ```
+|_col0                                      |_col1           |
+|-------------------------------------------|----------------|
+|{"0"=>NULL, "1"=>1, "2"=>2, "4"=>4}        |{"a1"=>1, "b2"=>2, "d4"=>4, "c0"=>NULL}|
+
 
 ### TRANSFORM_VALUES(map(K, V1), function(K, V1, V2)) -> map(K, V2)
 MAPのvalueのみにfunctionを適用し，新しいvalueでMAPを再構築します。新しいvalueはNULLになってもかまいません。
@@ -696,3 +749,7 @@ SELECT TRANSFORM_VALUES(mp,(k,v)->v),
        TRANSFORM_VALUES(mp,(k,v)->k||CAST(v AS VARCHAR))
 FROM map_table
 ```
+|_col0                                      |_col1           |
+|-------------------------------------------|----------------|
+|{"a"=>1, "b"=>2, "c"=>NULL, "d"=>4}        |{"a"=>"a1", "b"=>"b2", "c"=>NULL, "d"=>"d4"}|
+
