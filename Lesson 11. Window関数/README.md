@@ -480,21 +480,21 @@ Window関数の枠組みの中でも集約関数を利用できます。ただ�
 「ROWS...BETWEEN」句の書き方のパターンは以下の説明を参照してください。
 ### ROWS BETWEENパターン
 - ROWS BETWEEN m PRECEDING AND n FOLLOWING
-：自己レコードに対して「m個前」から「n個先」までの範囲を指定します。
+  - ：自己レコードに対して「m個前」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND n FOLLOWING
-：自己レコードに対して「前すべて」から「n個先」までの範囲を指定します。
+  - ：自己レコードに対して「前すべて」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN m PRECEDING AND UNBOUNDED FOLLOWING
-：自己レコードに対して「m個前」から「先すべて」までの範囲を指定します。
+  - ：自己レコードに対して「m個前」から「先すべて」までの範囲を指定します。
 - ROWS BETWEEN m PRECEDING AND CURRENT ROW
-：自己レコードに対して「m個前」から「自己」までの範囲を指定します。
+  - ：自己レコードに対して「m個前」から「自己」までの範囲を指定します。
 - ROWS BETWEEN CURRENT ROW AND n FOLLOWING
-：自己レコードに対して「自己」から「n個先」までの範囲を指定します。
+  - ：自己レコードに対して「自己」から「n個先」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-：自己レコードに対して「前すべて」から「自己」までの範囲を指定します。これがデフォルトの範囲です。
+  - ：自己レコードに対して「前すべて」から「自己」までの範囲を指定します。これがデフォルトの範囲です。
 - ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-：自己レコードに対して「自己」から「先すべて」までの範囲を指定します。
+  - ：自己レコードに対して「自己」から「先すべて」までの範囲を指定します。
 - ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-：自己レコードに対して「前すべて」から「先すべて」までの範囲を指定します。
+  - ：自己レコードに対して「前すべて」から「先すべて」までの範囲を指定します。
 
 ### ROWSとRANGEの違い
 ここで重要な注意点を述べます。多くのドキュメントなどでは，ROWSではなくRANGEが使われている場合があります。（例：RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW）
