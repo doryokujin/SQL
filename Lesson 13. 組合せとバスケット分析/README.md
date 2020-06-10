@@ -25,6 +25,14 @@ SELECT n1.number, n2.number
 FROM numbers n1, numbers n2
 ORDER BY n1.number, n2.number
 ```
+|number|number|
+|------|------|
+|1     |1     |
+|1     |2     |
+|...   |      |
+|6     |5     |
+|6     |6     |
+
 
 上記の結果からわかるように，36個の数値の組合せ結果がすべて得られました。
 
@@ -41,6 +49,14 @@ FROM numbers n1, numbers n2
 WHERE n1.number <> n2.number
 ORDER BY n1.number, n2.number
 ```
+|number|number|
+|------|------|
+|1     |2     |
+|1     |3     |
+|...   |      |
+|6     |4     |
+|6     |5     |
+
 
 今度は30個の数値の組合せ結果が得られました。
 
@@ -72,10 +88,14 @@ ON n1.number <> n2.number
 ORDER BY n1.number, n2.number
 ```
 
-上記のクエリをHiveで実行すると，「SemanticException : Both left and right aliases encountered in JOIN 'number'」というエラーになります。
+上記のクエリをHiveで実行すると
+```sql
+SemanticException : Both left and right aliases encountered in JOIN 'number'
+```
+というエラーになります。
 
 ### 3. 2つの数値の組合せで順序を気にしない
-今度は，（1, 2）と（2, 1）を同じものとして扱った組合せを求めます。さらに，2.と同様に同じ数値同士の場合も除外します。
+今度は，（1, 2）と（2, 1）を同じものとして扱った組合せを求めます。さらに，2.と同様に同じ数値同士の場合も除外します。また，JOINを使った同様のクエリを並列しておきます。
 
 ```sql
 WITH numbers AS 
@@ -86,6 +106,25 @@ FROM numbers n1, numbers n2
 WHERE n1.number < n2.number
 ORDER BY n1.number, n2.number
 ```
+```sql
+WITH numbers AS 
+( SELECT number FROM ( VALUES 1,2,3,4,5,6 ) AS t(number) )
+
+SELECT n1.number, n2.number
+FROM numbers n1 JOIN numbers n2
+ON n1.number < n2.number
+ORDER BY n1.number, n2.number
+```
+
+|number|number|
+|------|------|
+|1     |2     |
+|1     |3     |
+|...   |      |
+|4     |5     |
+|4     |6     |
+|5     |6     |
+
 
 30個の結果が得られた2.に対し，半分の15個の組合せが得られました。
 
@@ -113,6 +152,19 @@ FROM tableware n1, tableware n2
 WHERE n1.id < n2.id
 ORDER BY n1.id, n2.id
 ```
+|id |id |_col2  |
+|---|---|-------|
+|c1 |c2 |c1 & c2|
+|c1 |c3 |c1 & c3|
+|c1 |d1 |c1 & d1|
+|c1 |d2 |c1 & d2|
+|c2 |c3 |c2 & c3|
+|c2 |d1 |c2 & d1|
+|c2 |d2 |c2 & d2|
+|c3 |d1 |c3 & d1|
+|c3 |d2 |c3 & d2|
+|d1 |d2 |d1 & d2|
+
 
 全部で10の組合せが得られました。
 
@@ -132,6 +184,15 @@ WHERE n1.id < n2.id
 AND n1.type <> n2.type
 ORDER BY n1.id, n2.id
 ```
+|id |id |_col2  |
+|---|---|-------|
+|c1 |d1 |c1 & d1|
+|c1 |d2 |c1 & d2|
+|c2 |d1 |c2 & d1|
+|c2 |d2 |c2 & d2|
+|c3 |d1 |c3 & d1|
+|c3 |d2 |c3 & d2|
+
 
 ## トランプの組合せ
 今度はジョーカーを除く52枚のトランプの組合せを考えてみましょう。
@@ -155,6 +216,14 @@ AND n1.number < n2.number
 GROUP BY n1.symbol, n1.number, n2.number
 ORDER BY cnt DESC, n1.symbol, n1.number, n2.number
 ```
+|symbol|number|number |cnt|
+|------|------|-------|---|
+|♡     |1     |2      |1  |
+|♡     |1     |3      |1  |
+|...   |      |       |   |
+|♦     |11    |13     |1  |
+|♦     |12    |13     |1  |
+
 
 結果は312通りとなりました。
 
@@ -182,6 +251,14 @@ FROM
 GROUP BY number1, number2
 ORDER BY cnt DESC, number1, number2
 ```
+|number1|number2|cnt    |
+|-------|-------|-------|
+|1      |2      |4      |
+|1      |3      |4      |
+|...    |       |       |
+|11     |13     |4      |
+|12     |13     |4      |
+
 
 すべての数字のペアが4回ずつ登場しているのがわかります。
 ## バスケット分析
@@ -219,6 +296,32 @@ GROUP BY g1.goods_id, g2.goods_id
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt    |
+|---------|---------|-------|
+|541456   |547453   |158    |
+|546452   |547453   |153    |
+|531458   |547453   |139    |
+
+また，JOINでの同様のクエリも併記しておきます。
+
+```sql
+WITH gm_stat AS
+(
+  SELECT member_id, goods_id
+  FROM sales_slip
+  WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
+  GROUP BY member_id, goods_id
+)
+
+SELECT g1.goods_id AS goods_id1, g2.goods_id AS goods_id2, COUNT(1) AS cnt
+FROM gm_stat g1 JOIN gm_stat g2
+ON g1.member_id=g2.member_id
+AND g1.goods_id<g2.goods_id
+GROUP BY g1.goods_id, g2.goods_id
+ORDER BY cnt DESC
+LIMIT 10
+```
+
 このクエリを，グッズ単体や全体の登場回数とともに，WITH節を用いてシンプルにまとめます。
 ```sql
 WITH gm_stat AS
@@ -254,6 +357,12 @@ WHERE combi.goods_id1=g1.goods_id AND combi.goods_id2=g2.goods_id
 ORDER BY combi_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|combi_cnt|total_cnt|
+|---------|---------|-------|----|---------|---------|
+|541456   |547453   |413    |1700|158      |445222   |
+|546452   |547453   |259    |1700|153      |445222   |
+|531458   |547453   |394    |1700|139      |445222   |
+
 
 また，アイテム同士の共起の可視化として，以下の様なグラフ表現も有効です（以下のグラフは今回の結果とは異なるものであることをご了承ください）。各ノードがアイテムを表し，共起回数を辺の太さで表現しています。
 
@@ -305,6 +414,12 @@ WHERE combi.goods_id1=g1.goods_id AND combi.goods_id2=g2.goods_id
 ORDER BY combi_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|combi_cnt|total_cnt|
+|---------|---------|-------|----|---------|---------|
+|546452   |547453   |327    |2213|110      |202354   |
+|538660   |540882   |371    |216 |87       |202354   |
+|545690   |547453   |247    |2213|84       |202354   |
+
 
 ### 遷移回数 | A → B |，| B → A |
 今度は，「同時」ではなく，（同じユーザーの）「その次」の買い物で登場したグッズとペアリングすることで，ショッピングサイトでは次のような文言で表されるような意味を持ったペアを抽出することを考えてみます。
@@ -358,6 +473,13 @@ WHERE trans.goods_id1=g1.goods_id AND trans.goods_id2=g2.goods_id
 ORDER BY trans_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|trans_cnt|total_cnt|
+|---------|---------|-------|----|---------|---------|
+|547453   |547453   |2213   |2213|238      |202354   |
+|109601   |109601   |540470 |540470|199      |202354   |
+|543766   |547453   |356    |2213|51       |202354   |
+
+
 次は，「1ステップ」の遷移に限らず，同じユーザーがグッズAを購入した以降にグッズBを購入した場合にカウントする，より汎用的なクエリを紹介します。注意点として，1人のユーザーに対して「グッズA→グッズB」は1回のみカウントすることとします（つまり，グッズAの後にグッズBの購入が複数回あっても1回，グッズA→グッズB→...→グッズA→グッズBのような場合も1回とみなします）。また，この場合の全体の数（total_cnt）は概念が難しいので省略しています。
 
 ```sql
@@ -392,6 +514,12 @@ WHERE trans.goods_id1=g1.goods_id AND trans.goods_id2=g2.goods_id
 ORDER BY trans_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|trans_cnt|
+|---------|---------|-------|----|---------|
+|547453   |541456   |2213   |843 |142      |
+|541456   |547453   |843    |2213|140      |
+|531458   |547453   |658    |2213|139      |
+
 
 「グッズA→グッズB」と「グッズA→グッズB」では意味が異なるので，同じ値になっていないことに注目してください。とはいえ，遷移回数が上位のグッズペアは期間を通して複数回買われているものが多く，その中で両方の向きの遷移が起こっているので，近い回数の値になっていると考えられます。
 
@@ -437,6 +565,12 @@ WHERE combi.goods_id1=g1.goods_id AND combi.goods_id2=g2.goods_id
 ORDER BY combi_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|combi_cnt|total_cnt|jaccard_coeff      |simpson_coeff      |cos_coeff          |dice_coeff         |
+|---------|---------|-------|----|---------|---------|-------------------|-------------------|-------------------|-------------------|
+|541456   |547453   |413    |1700|158      |445222   |0.08081841432225063|0.38256658595641646|0.1885634868608601 |0.07477520113582584|
+|546452   |547453   |259    |1700|153      |445222   |0.08471760797342193|0.5907335907335908 |0.23057758600094497|0.0781010719754977 |
+|531458   |547453   |394    |1700|139      |445222   |0.0710997442455243 |0.35279187817258884|0.16984087893220706|0.06638013371537727|
+
 
 共起回数が大きいからといって共起係数も大きいとは限りません。それぞれの係数の計算方法と解釈を見ていきましょう。
 
@@ -489,6 +623,12 @@ WHERE combi.goods_id1=g1.goods_id AND combi.goods_id2=g2.goods_id
 ORDER BY combi_cnt DESC
 LIMIT 10
 ```
+|goods_id1|goods_id2|cnt1   |cnt2|combi_cnt|total_cnt|confidence         |support            |lift               |
+|---------|---------|-------|----|---------|---------|-------------------|-------------------|-------------------|
+|547453   |541456   |1700   |413 |158      |445222   |0.09294117647058824|0.00035487913894641324|100.1923885486398  |
+|541456   |547453   |413    |1700|158      |445222   |0.38256658595641646|0.00035487913894641324|100.1923885486398  |
+|546452   |547453   |259    |1700|153      |445222   |0.5907335907335908 |0.00034364878644810906|154.71034749034752 |
+
 
 #### Confidence係数：| A ∩ B | / | A |
 
