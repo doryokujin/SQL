@@ -52,7 +52,7 @@ LIMIT 5
 |time|member_id|category|sub_category|goods_id|
 |----|---------|--------|------------|--------|
 |1354147836|391139   |Movies and Music and Games|Entertainment Collectibles|602270  |
-|1319643101|         |Automotive and Industrial|Lab and Scientific|109601  |
+|1319643101|NULL         |Automotive and Industrial|Lab and Scientific|109601  |
 |1354963866|1638055  |Beauty and Health and Grocery|Specialty Diets|606541  |
 |1265313812|282436   |Toys and Kids and Baby|For Baby    |382080  |
 |1123604291|111187   |Electronics and Computers|Wearable Technology|122035  |
@@ -67,11 +67,11 @@ LIMIT 5
 ```
 |time|member_id|category|sub_category|goods_id|rnd                   |
 |----|---------|--------|------------|--------|----------------------|
-|1367296687|         |Automotive and Industrial|Lab and Scientific|109601  |2.1735940403111442e-07|
+|1367296687|NULL         |Automotive and Industrial|Lab and Scientific|109601  |2.1735940403111442e-07|
 |1202236057|717558   |Electronics and Computers|Cell Phones and Accessories|249775  |2.659721006770255e-07 |
 |1293285082|949366   |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |7.179268182166965e-07 |
 |1387234627|517345   |Electronics and Computers|Trade In Your Electronics|665739  |8.370794056800079e-07 |
-|1334767187|         |Automotive and Industrial|Lab and Scientific|109601  |8.393554470353948e-07 |
+|1334767187|NULL         |Automotive and Industrial|Lab and Scientific|109601  |8.393554470353948e-07 |
 
 
 ## ROW_NUMBERとRAND関数によるランダムサンプリング
@@ -87,11 +87,11 @@ WHERE rnd_rnk <= 5
 ```
 |time|member_id|category|sub_category|goods_id|rnd_rnk               |
 |----|---------|--------|------------|--------|----------------------|
-|1319312519|         |Automotive and Industrial|Lab and Scientific|109601  |1                     |
+|1319312519|NULL         |Automotive and Industrial|Lab and Scientific|109601  |1                     |
 |1310589185|1132047  |Sports and Outdoors|Sports Collectibles|512941  |2                     |
 |1195516803|949366   |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |3                     |
-|1349567121|         |Automotive and Industrial|Lab and Scientific|109601  |4                     |
-|1382551570|2259091  |Automotive and Industrial|Lab and Scientific|        |5                     |
+|1349567121|NULL         |Automotive and Industrial|Lab and Scientific|109601  |4                     |
+|1382551570|2259091  |Automotive and Industrial|Lab and Scientific|NULL        |5                     |
 
 
 このクエリにはLIMIT節が入らないので，UNION ALLなどでクエリを続けることができます。下記のクエリ例はサンプリングを並行して2回繰り返すものです。
@@ -117,11 +117,11 @@ WHERE rnd_rnk <= 5
 |1208484603|695856   |Beauty and Health and Grocery|All Beauty  |260052  |1                     |
 |1318863299|1952695  |Electronics and Computers|Software    |533854  |2                     |
 |1258663183|574971   |Home and Garden and Tools|Appliances  |364286  |3                     |
-|1354367776|         |Automotive and Industrial|Lab and Scientific|109601  |4                     |
+|1354367776|NULL         |Automotive and Industrial|Lab and Scientific|109601  |4                     |
 |1190403880|1104914  |Movies and Music and Games|Digital Games|233695  |5                     |
 |1149882259|558829   |Toys and Kids and Baby|For Girls   |164186  |1                     |
-|1352590636|         |Automotive and Industrial|Lab and Scientific|109601  |2                     |
-|1325342386|         |Automotive and Industrial|Lab and Scientific|109601  |3                     |
+|1352590636|NULL         |Automotive and Industrial|Lab and Scientific|109601  |2                     |
+|1325342386|NULL         |Automotive and Industrial|Lab and Scientific|109601  |3                     |
 |1250183164|554562   |Beauty and Health and Grocery|Health and Household and Baby Care|344561  |4                     |
 |1300399724|90886    |Home and Garden and Tools|Arts and Crafts and Sewing|488745  |5                     |
 
@@ -145,8 +145,8 @@ ORDER BY category
 |time|member_id|category|sub_category|goods_id|rnd_rnk               |
 |----|---------|--------|------------|--------|----------------------|
 |1169892840|940685   |Automotive and Industrial|Industrial Supplies|201438  |1                     |
-|1361026836|         |Automotive and Industrial|Lab and Scientific|109601  |2                     |
-|1330942517|         |Automotive and Industrial|Lab and Scientific|109601  |3                     |
+|1361026836|NULL         |Automotive and Industrial|Lab and Scientific|109601  |2                     |
+|1330942517|NULL         |Automotive and Industrial|Lab and Scientific|109601  |3                     |
 
 
 この方法は，カテゴリごとにランダムサンプリングした結果を使いたい場合には有用です。しかし，カテゴリから満遍なく取得したいという目的がある場合には，それらをひとまとまりのサンプルとして扱うには難点があります。なぜなら，カテゴリごとに母集団の数が異なるからです。例えば，全部で1万レコードあるカテゴリAと100レコードしかないカテゴリBから等しく10件ずつランダムサンプリングしてくると，カテゴリBの割合が圧倒的に高いサンプルとなり，元のテーブルとは分布が異なったサンプルとなってしまいます。
@@ -229,9 +229,9 @@ ORDER BY category
 ```
 |time|member_id|category|sub_category|goods_id|per_rnk              |
 |----|---------|--------|------------|--------|---------------------|
-|1317696525|         |Automotive and Industrial|Lab and Scientific|109601  |9.967415612234912e-05|
+|1317696525|NULL         |Automotive and Industrial|Lab and Scientific|109601  |9.967415612234912e-05|
 |1376996118|193551   |Automotive and Industrial|Industrial Supplies|583266  |9.922109177633845e-05|
-|1384775934|2259091  |Automotive and Industrial|Lab and Scientific|        |9.876802743032777e-05|
+|1384775934|2259091  |Automotive and Industrial|Lab and Scientific|NULL        |9.876802743032777e-05|
 
 
 上記のクエリでは，各カテゴリごとにランダムに並び替えたうえで，（上位）0.01%を取得しています。カテゴリごとに母集団の数が異なりますが，それぞれの中での0.01%を取得しているので，サンプル全体としてのカテゴリの専有割合は元のテーブルと同じになります。これを確認するためのクエリは以下になります。
@@ -290,7 +290,7 @@ ORDER BY category
 |time|member_id|category|sub_category|goods_id|tile|
 |----|---------|--------|------------|--------|----|
 |1383494533|2259091  |Automotive and Industrial|Lab and Scientific|        |1   |
-|1317995754|         |Automotive and Industrial|Lab and Scientific|109601  |1   |
+|1317995754|NULL         |Automotive and Industrial|Lab and Scientific|109601  |1   |
 |1254148710|1492081  |Automotive and Industrial|Tires and Wheels|353152  |1   |
 
 
@@ -377,9 +377,7 @@ ORDER BY cnt_all ASC
 |Automotive and Industrial|Motorcycle and Powersports|282371  |1      |1  |1.0  |
 |Sports and Outdoors|Hunting and Fishing|265622  |1      |1  |1.0  |
 |Electronics and Computers|Car Electronics and GPS|652662  |1      |1  |1.0  |
-…
-|category|sub_category|goods_id|cnt_all|cnt|ratio|
-|--------|------------|--------|-------|---|-----|
+|...||  |      |  |  |
 |Automotive and Industrial|Industrial Supplies|583266  |23307  |3  |0.00012871669455528383|
 |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |547616 |48 |8.765266171916088e-05|
 |Automotive and Industrial|Lab and Scientific|109601  |1525984|155|0.0001015738041814331|
