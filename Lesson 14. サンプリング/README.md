@@ -448,6 +448,13 @@ FROM sales_slip
 GROUP BY category, TD_TIME_FORMAT(time, 'yyyy-MM-dd', 'JST')
 ORDER BY cnt ASC
 ```
+|category|d  |cnt|
+|--------|---|---|
+|Beauty and Health and Grocery|2005-01-05|1  |
+|Automotive and Industrial|2005-01-02|1  |
+|Toys and Kids and Baby|2005-01-05|1  |
+
+
 残念ながら，1件しかない組合せが多数存在してしまっています。そこで，日単位を諦めて月単位で考えることにします。
 
 ```sql
@@ -456,6 +463,12 @@ FROM sales_slip
 GROUP BY category, TD_TIME_FORMAT(time, 'yyyy-MM-01', 'JST')
 ORDER BY cnt ASC
 ```
+|category|m  |cnt|
+|--------|---|---|
+|Clothing and Shoes and Jewelry|2004-12-01|22 |
+|Automotive and Industrial|2004-12-01|28 |
+|Books and Audible|2004-12-01|51 |
+
 
 最低でも22件のカテゴリと月の組合せがあることがわかりました。上記の結果を見たうえで，ここではサンプリング方針を以下のように定めます。
 - 2004年のレコードは無視する
@@ -473,6 +486,13 @@ FROM
 )
 WHERE tile <= 1 -- 1/379 ≒ 0.25%
 ```
+|time|member_id|category|sub_category    |goods_id|tile|
+|----|---------|--------|----------------|--------|----|
+|1166384297|949366   |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |1   |
+|1166003653|949366   |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |1   |
+|1167134792|949366   |Beauty and Health and Grocery|Menâ€™s Grooming|109090  |1   |
+
+
 いつも通り，パーティションごとの母数とサンプル数を確認してみます。
 
 ```sql
@@ -498,9 +518,17 @@ FROM
 WHERE s.category = stat.category AND s.m = stat.m
 ORDER BY cnt_all ASC
 ```
-…
+|category|m  |cnt_all|cnt_sample      |ratio |
+|--------|---|-------|----------------|------|
+|Books and Audible|2005-01-01|379    |1               |0.002638522427440633|
+|Books and Audible|2005-02-01|467    |2               |0.004282655246252677|
+|Clothing and Shoes and Jewelry|2005-01-01|478    |2               |0.0041841004184100415|
+|Movies and Music and Games|2005-01-01|482    |2               |0.004149377593360996|
+|Automotive and Industrial|2005-01-01|504    |2               |0.003968253968253968|
+|...     |   |       |                |      |
+|Automotive and Industrial|2013-07-01|68485  |181             |0.0026429145068263124|
+|Automotive and Industrial|2011-11-01|153386 |405             |0.0026403974287092695|
+|Automotive and Industrial|2011-10-01|296840 |784             |0.002641153483358038|
+
 
 小さいところでは，0.40%と2倍ほどのサンプリングになってしまっていますが，大きいところではうまく0.26%のサンプリングとなっています。
-最後に，元データとサンプリングしたデータがどれくらい似通っているか，チャートで見てみましょう。まずは，元のデータとサンプリングデータについて，各カテゴリの存在比率を見てみます。すると，両者はほぼ同じになっていることが確認できます。
-
-次に，カテゴリごとの時系列データを全体の時系列データと比較してみます。下図は「Books and Audible」カテゴリにおける時系列データですが，元データとサンプリングしたデータが同じ傾向を持ったチャートになっていることがわかります。
