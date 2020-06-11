@@ -45,6 +45,11 @@ FROM (
 )
 GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
 ```
+|ab |cnt              |ag                |sd                |
+|---|-----------------|------------------|------------------|
+|B  |4408             |204696.70961887477|2445357.7436663453|
+|A  |4421             |165884.85161728115|219180.89283232426|
+
 
 これから4421人のAグループと4408人のBグループで，165,884円と204,696円の平均購入額に統計的に差異があるのかを検定します。16万と20万の差は割と大きいと思われますがどうでしょうか？ インプットテーブルがこの形式であれば，後はテンプレートクエリによってテストの結果を返すことができます。
 まず，この基本統計値から後でTの計算に使う値をueachカラムとして準備しておきます。
@@ -69,6 +74,11 @@ WITH ab_table AS
 SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
 FROM ab_table
 ```
+|ab |cnt              |ag                |sd                |ueach             |
+|---|-----------------|------------------|------------------|------------------|
+|B  |4408             |204696.70961887477|2445357.7436663453|5979774494508.959 |
+|A  |4421             |165884.85161728115|219180.89283232423|48040263782.774796|
+
 
 ## A/Bレコードのマージ
 次に，AとBのレコードのカラム値同士を計算できるようにするために，この2行のレコードを1行のレコードにマージします。
@@ -101,6 +111,12 @@ FROM
   FROM ab_table
 )
 ```
+|FIELD1|a                |b                 |cnt_a             |cnt_b             |avg_a             |avg_b            |sd_a             |sd_b              |ueach_a          |ueach_b          |FIELD12|
+|------|-----------------|------------------|------------------|------------------|------------------|-----------------|-----------------|------------------|-----------------|-----------------|-------|
+|      |---              |----------------- |------------------|------------------|------------------|------------------|-----------------|----------------- |------------------|-----------------|       |
+|      |A                |B                 |4421              |4408              |165884.85161728115|204696.70961887477|219180.8928323243|2445357.743666347 |48040263782.774826|5979774494508.968|       |
+|      |B                |NULL                 |4408              |NULL                  |204696.70961887477|NULL                  |2445357.743666347|NULL                 |5979774494508.968 |NULL                 |       |
+
 
 この結果，2番目のレコードは必要なくなるので，次のクエリでは必要な1行目だけを抽出するようにします。
 
@@ -143,6 +159,10 @@ SELECT *,
 FROM ueach_table
 WHERE a = 'A'
 ```
+|a  |b                |cnt_a             |cnt_b             |avg_a             |avg_b             |sd_a             |sd_b             |ueach_a           |ueach_b          |t_stat           |m     |
+|---|-----------------|------------------|------------------|------------------|------------------|-----------------|-----------------|------------------|-----------------|-----------------|------|
+|A  |B                |4421              |4408              |165884.85161728115|204696.70961887477|219180.8928323243|2445357.743666346|48040263782.774826|5979774494508.964|1.0494484257242693|4478.0|
+
 
 ## テストテンプレート
 テーブルとして持っているt分布テーブルの該当する自由度の値を抽出し，先程求めたwelchテーブルのt_statと比較して，その大小で検定をRejectする（平均が等しいという仮設を棄却＝平均に差異があることを認める）かどうかを判定します。これでテンプレートクエリの完成です。
@@ -195,6 +215,10 @@ SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b,
   t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
 FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|4421 |4408             |165885.0          |204697.0          |1.0494484257242693|1.96              |NOT REJECT       |
+
 上記のテスト結果は「NOT REJECT：差異が認められない」となりました。
 
 ## サンプル数と標準偏差が変化するとテストの結果はどう変わるか？
@@ -238,8 +262,43 @@ WITH ab_table AS
   )
   GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|442100|440800           |165885.0          |204697.0          |10.495662917691837|1.96              |REJECT           |
+
 この場合，t_statの値が10倍ほど大きくなり，t_valを超えて棄却される（差があるとみなす）結果となりました。サンプル数が大きくなればなるほど，今まで棄却できなかった（差があると言えなかった）ものが棄却されやすくなります。これは，サンプル数が大きくなればテストの自信が増すことを意味しています。また本来はt_valの値もより小さくなるのですが，元のサンプル数も十分に大きいため，ほとんど変化が見えない結果となっています。
 
 ### 1-b. A,B 双方のサンプル数がもっと少ない場合
@@ -263,8 +322,43 @@ WITH ab_table AS
   )
   GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|44   |44               |165885.0          |204697.0          |0.10366179214964653|2.015368          |NOT REJECT       |
+
 この場合，先程とは逆に，t_statの値が1/10ほどになり，t_valは大きくなりました。結果的に棄却域よりも大きく離れることになり，棄却できない結果となりました。
 
 ### 2. Aのサンプル数がBに対して圧倒的に少ない場合
@@ -292,14 +386,105 @@ WITH ab_table AS
     GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
   )
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|44   |4408             |165885.0          |204697.0          |0.7802901476542795|1.971435          |NOT REJECT       |
 
 この場合，t_statが元よりもそれなりに小さな値となり，t_valも若干大きくなりました（自由度mは208）。これによって，t_statが棄却域から遠ざかることになり，棄却できない結果となりました。次にAとBの極端さをさらに大きくしてみます。
 
 1. （サンプル数）A：4人，B：440000人 ←Aを1/1000，Bを100倍
 2. （平均購入額）A：16.6万円，B：20.5万円
 3. （標準偏差）A：220000，B：2450000
+
+```sql
+WITH ab_table AS
+(
+  SELECT ab, IF(ab='A',cnt/1000, cnt*100) AS cnt, ag, sd
+  FROM
+  (
+    SELECT 
+      IF(CAST(member_id AS INTEGER)%2=0,'A','B') AS ab, 
+      COUNT(1) AS cnt,
+      AVG(sales)    AS ag,
+      STDDEV(sales) AS sd
+    FROM (
+      SELECT member_id, SUM(price*amount) AS sales
+      FROM sales_slip
+      WHERE TD_TIME_RANGE(time, '2011-01-01','2012-01-01','JST')
+      GROUP BY member_id
+    )
+    GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
+  )
+),
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
+```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|4    |440800           |165885.0          |204697.0          |0.3065762383235844|3.182446          |NOT REJECT       |
 
 この場合，t_statの値は元よりも遥かに小さくなり，特筆すべきはt_valが遥かに大きくなった（t分布の自由度は3!）ことです。これは片方のサンプルが極端に小さければそちらに影響され，他方がどれだけ大きくてもほとんど差異を判定できないテストとなってしまうことを示しています。
 
@@ -324,9 +509,46 @@ WITH ab_table AS
   )
   GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|4421 |4408             |165885.0          |204697.0          |0.010494484257242694|1.96              |NOT REJECT       |
+
+
 標準偏差が大きくなると，t_statの方に圧倒的に小さくなり，ほとんど棄却できない状態となります。標準偏差（分散）が大きい平均値は，サンプルのとる値に大きなブレがあるということなので，テストの自信をなくす方向に働くことになります。また，標準偏差を変えてもt_valには大きな影響はありません。
+
 ### 3-b. A,B 双方の標準偏差がもっと小さい場合
 1. （サンプル数）A：4400人，B：4400人
 2. （平均購入額）A：16.6万円，B：20.5万円
@@ -347,8 +569,44 @@ WITH ab_table AS
   )
   GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|4421 |4408             |165885.0          |204697.0          |104.9448425724269 |1.96              |REJECT           |
+
+
 標準偏差が大きくなると，t_statの方に圧倒的に大きくなり，棄却しやすい状態になります。これは，標準偏差の小さいサンプルからの平均値は信頼できるものなので，16.6万円と20.5万円でははっきりと差異があると言えることを意味しています。
 ### 4. Aの標準偏差がBに対して圧倒的に大きい場合，テストの結果はどう変わるか？
 1. （サンプル数）A：4400人，B：4400人
@@ -374,8 +632,44 @@ WITH ab_table AS
     GROUP BY IF(CAST(member_id AS INTEGER)%2=0,'A','B')
   )
 ),
-...
+ueach_table AS
+(
+  SELECT 
+    ab    AS a,       LEAD(ab)OVER(ORDER BY ab)    AS b,
+    cnt   AS cnt_a,   LEAD(cnt)OVER(ORDER BY ab)   AS cnt_b,
+    ag    AS avg_a,   LEAD(ag)OVER(ORDER BY ab)    AS avg_b,
+    sd    AS sd_a,    LEAD(sd)OVER(ORDER BY ab)    AS sd_b,
+    ueach AS ueach_a, LEAD(ueach)OVER(ORDER BY ab) AS ueach_b
+  FROM
+  (
+    SELECT *, (cnt/(cnt-1))*sd*sd AS ueach
+    FROM ab_table
+  )
+),
+welch AS
+(
+  SELECT *,
+    ABS( (avg_a-avg_b)/SQRT(sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)) ) AS t_stat,
+    ROUND( POW((sd_a*sd_a/(cnt_a-1)+sd_b*sd_b/(cnt_b-1)),2) / ( POW(sd_a,4)/POW(cnt_a-1,3) + POW(sd_b,4)/POW(cnt_b-1,3) ) ) AS m
+  FROM ueach_table
+  WHERE a = 'A'
+),
+t AS
+(
+  SELECT MIN_BY(t_dist.val,t_dist.m) AS t_val
+  FROM welch, t_dist
+  WHERE welch.m <= t_dist.m
+)
+
+SELECT cnt_a, cnt_b, ROUND(avg_a) AS avg_a, ROUND(avg_b) AS avg_b, 
+  t_stat, t_val, IF(t_stat>t_val,'REJECT','NOT REJECT') AS test_res
+FROM welch, t
 ```
+|cnt_a|cnt_b            |avg_a             |avg_b             |t_stat            |t_val             |test_res         |
+|-----|-----------------|------------------|------------------|------------------|------------------|-----------------|
+|4421 |4408             |165885.0          |204697.0          |0.11772605896350993|1.96              |NOT REJECT       |
+
+
 この結果は，片方の標準偏差がどれだけ小さくても（信頼できても），他方のそれが圧倒的に大きい場合にはt_statが遥かに小さくなり，全く棄却できないテストとなってしまうことを示しています。
 
 ## GROUP BYに対応したテンプレートクエリ
@@ -434,6 +728,16 @@ FROM welch JOIN t
 ON welch.sub_category = t.sub_category
 ORDER BY t_stat DESC
 ```
+|sub_category|cnt_a            |cnt_b             |avg_a             |avg_b             |t_stat            |t_val            |test_res  |
+|------------|-----------------|------------------|------------------|------------------|------------------|-----------------|----------|
+|Pet Supplies|1803             |1823              |5110.0            |4572.0            |2.6435229759742676|1.96             |REJECT    |
+|Cell Phones and Accessories|1629             |1650              |4941.0            |5522.0            |2.4760638964276223|1.96             |REJECT    |
+|Menâ€™s Grooming|1507             |1488              |4764.0            |5381.0            |2.318784943315247 |1.96             |REJECT    |
+|Hunting and Fishing|1433             |1495              |4874.0            |5352.0            |1.8464156355524592|1.96             |NOT REJECT|
+|Entertainment Collectibles|1490             |1469              |4931.0            |4508.0            |1.7420797648705493|1.96             |NOT REJECT|
+|Automotive Tools and Equipment|1582             |1580              |4519.0            |4998.0            |1.715586065782713 |1.96             |NOT REJECT|
+
+
 上の結果からは，例えば以下のようなことがわかります。
 - Pet SuppliesのA：5110円とB：4572円には差異がある（REJECT）
 - Hunting and FishingのA：4874円とB：5352円には差異が認められない（NOT REJECT）
@@ -495,5 +799,11 @@ ON welch.td_title = t.td_title
 WHERE 50 <= cnt_a AND 50 <= cnt_b
 ORDER BY t_stat DESC
 ```
+|td_title|cnt_a            |cnt_b             |avg_a             |avg_b             |t_stat            |t_val            |test_res  |
+|--------|-----------------|------------------|------------------|------------------|------------------|-----------------|----------|
+|プライベートDMPソリューション”TREASURE(トレジャー) DMP(ディーエムピー)”を 4月より提供開始 - プレスリリース - Treasure Data|298              |370               |1.8               |2.0               |1.1905781581541686|1.963609         |NOT REJECT|
+|Eコマース - Treasure Data|155              |177               |1.7               |1.5               |1.1597967524793498|1.968093         |NOT REJECT|
+|会社情報 - Treasure Data|328              |342               |1.4               |1.9               |1.1535810869244305|1.966726         |NOT REJECT|
+
 
 この例では，すべて差異が認められない結果となりました。
