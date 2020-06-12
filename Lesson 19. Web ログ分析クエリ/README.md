@@ -15,6 +15,12 @@ FROM sample_accesslog
 ORDER BY postal_code
 LIMIT 10
 ```
+|country_name|subdivision_name|city_name|postal_code|lat    |lon     |conn_type|domain|
+|------------|----------------|---------|-----------|-------|--------|---------|------|
+|Japan       |Hokkaido        |Obihiro  |001-0011   |42.8863|143.4148|Cable/DSL|      |
+|Japan       |Hokkaido        |Obihiro  |001-0011   |42.8863|143.4148|Cable/DSL|      |
+|Japan       |Hokkaido        |Obihiro  |001-0011   |42.8863|143.4148|Cable/DSL|      |
+
 
 ### 国，県，都市名を特定する
 ```sql
@@ -30,10 +36,21 @@ GROUP BY TD_IP_TO_COUNTRY_NAME(td_ip),
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|country_name|subdivision_name|city_name|cnt|
+|------------|----------------|---------|---|
+|Japan       |NULL            |NULL     |8976|
+|Japan       |Tokyo           |Tokyo    |7376|
+|Japan       |Tokyo           |Shibakoen|5831|
+
 
 ### 郵便番号を特定し，市町村名にマッピングする
 郵便番号に対応する市町村データを以下のURLからダウンロードし，ken_all_romeテーブルとして格納します。
-https://www.post.japanpost.jp/zipcode/dl/readme_ro.html
+https://www.post.japanpost.jp/zipcode/dl/roman-zip.html
+
+ダウンロードしたファイルにはヘッダーがありませんので，以下を先頭行に挿入してください。
+```sql
+postal_code,pref_name,city_name,town_name,pref_name_rome,city_name_rome,town_name_rome
+```
 
 下記のクエリでは，IPアドレスより変換した郵便番号をken_all_romeと結合して詳細な市町村名を取得し，集計しています。ユニークなユーザーの市町村集計を行うために，DISTINCTを用いてIPアドレスを取ってきています。
 
@@ -55,6 +72,12 @@ GROUP BY s1.postal_code, pref_name_rome, city_name_rome, town_name_rome
 ORDER BY cnt DESC
 LIMIT 10
 ```
+|postal_code|pref_name_rome|city_name_rome|town_name_rome|cnt |
+|-----------|--------------|--------------|--------------|----|
+|1020082    |TOKYO TO      |CHIYODA KU    |ICHIBANCHO    |1803|
+|1540017    |TOKYO TO      |SETAGAYA KU   |SETAGAYA      |647 |
+|1600021    |TOKYO TO      |SHINJUKU KU   |KABUKICHO     |484 |
+
 
 ### 接続タイプ，ドメインを特定する
 IPアドレスからわかる興味深い情報として，接続タイプとドメインを特定することができます。
@@ -69,6 +92,14 @@ GROUP BY TD_IP_TO_CONNECTION_TYPE(td_ip), TD_IP_TO_DOMAIN(td_ip)
 ORDER BY cnt DESC
 LIMIT 100
 ```
+|conn_type |domain|cnt  |
+|----------|------|-----|
+|Cable/DSL |ucom.ne.jp|13633|
+|Cable/DSL |ocn.ne.jp|6527 |
+|Cable/DSL |dion.ne.jp|2862 |
+|Cellular  |spmode.ne.jp|2494 |
+|Cable/DSL |nuro.jp|2478 |
+
 
 ## アクティビティの推移
 
@@ -123,8 +154,6 @@ past_1month AS
 
 「1ヶ月前よりも過去」という表現はTD_INTERVALでは記述できませんので，初めにログの範囲を確認し，それよりも長い期間を指定することで代替します。今回は'-10y'としています。
 
-次に，それぞれの時間範囲（データ範囲）を上図で確認しましょう。past_1monthテーブルは赤色の領域，before_1monthテーブルはオレンジ色の領域となり，この2つの領域は交わらずかつ合わせて1ヶ月前からの全データ領域をカバーしています。
-
 さて，この2つのテーブルのユーザーリストにおいて，
 - 双方に存在するユーザー：active
 - before_1monthのみに存在するユーザー：non_active
@@ -165,6 +194,13 @@ FROM before_1month b1
 FULL OUTER JOIN past_1month p1
 ON b1.td_client_id = p1.td_client_id
 ```
+|td_client_id|segment|min_time|max_time  |
+|------------|-------|--------|----------|
+|2788574a-5be7-43c8-a73a-8bd47706a34f|non_active|NULL    |NULL      |
+|0495933c-9608-40d1-ea1c-e81b71ae15d3|active |2014-11-02|2014-11-27|
+|1b4b27c5-923c-4a18-859e-4cb7aca2799c|non_active|NULL    |NULL      |
+
+
 一度，セグメントごとの人数を確認してみましょう。
 ```sql
 /* ログの範囲 [2014-09-05, 2015-01-07]
@@ -205,6 +241,13 @@ SELECT segment, COUNT(1) AS cnt
 FROM activity_past_1month
 GROUP BY segment
 ```
+|segment   |cnt   |
+|----------|------|
+|active    |1262  |
+|welcome   |10793 |
+|non_active|19442 |
+
+
 さてこの結果でも有用な情報ですが，この結果からはnon_activeだった人が，前から non_activeだったのか，直近まではactiveだったのか，はたまたwelcomeからすぐにnon_activeになったのか，といった背景が読み取れません。そこで，前々月のアクティビティを同様に求めることでこれらの背景を明確にしていきます。
 
 ### 前々月のアクティビティ
@@ -245,13 +288,18 @@ activity_past_2month AS
 )
 
 SELECT segment, COUNT(1) AS cnt
-FROM activity_past_1month
+FROM activity_past_2month
 GROUP BY segment
 ```
+|segment   |cnt   |
+|----------|------|
+|active    |1003  |
+|welcome   |11244 |
+|non_active|8457  |
 
-最後に，それぞれの時間範囲（データ範囲）だけ上図で確認しましょう。past_2monthテーブルは紫色の領域，before_2monthテーブルは緑色の領域となり，この2つの領域は交わらずかつ合わせて2ヶ月前からの全データ領域をカバーしています。
 
 ### アクティビティの推移
+前月と前々月のユーザーごとのアクティビティセグメントをLEFT OUTER JOINすることで同ユーザーのセグメントの推移が確認できます。（下のクエリは主要部分だけ抜粋しています。）
 ```sql
 SELECT 
   TD_TIME_FORMAT(TD_DATE_TRUNC('month', TD_DATE_TRUNC('month', TD_SCHEDULED_TIME(),'JST')-1, 'JST'),'yyyy-MM-dd','JST') AS target_month,
@@ -267,7 +315,6 @@ LEFT OUTER JOIN activity_past_2month
 ON activity_past_1month.td_client_id = activity_past_2month.td_client_id
 /* 集合 activity_past_1month は activity_past_2month を内包する */
 ```
-前月と前々月のユーザーごとのアクティビティセグメントをLEFT OUTER JOINすることで同ユーザーのセグメントの推移が確認できます。（上のクエリは主要部分だけ抜粋しています。）
 
 さらにセグメントの組合せで集計したクエリを，実行可能なクエリとして記述します。
 ```sql
@@ -357,6 +404,16 @@ FROM activity_users a
 GROUP BY target_month, a.activity_past_1, a.activity_past_2
 ORDER BY activity_past_1, activity_past_2
 ```
+|target_month|activity_past_1|activity_past_2|cnt  |
+|------------|---------------|---------------|-----|
+|2014-11-01  |active         |active         |245  |
+|2014-11-01  |active         |non_active     |151  |
+|2014-11-01  |active         |welcome        |866  |
+|2014-11-01  |non_active     |active         |758  |
+|2014-11-01  |non_active     |non_active     |8306 |
+|2014-11-01  |non_active     |welcome        |10378|
+|2014-11-01  |welcome        |NULL           |10793|
+
 
 ### セグメント名の割り振り
 最後に，冒頭で紹介したセグメント名を割り振った集計結果を出してみます。
@@ -477,6 +534,16 @@ JOIN master_activity m
 ON a.activity_past_1 = m.activity_past_1 AND a.activity_past_2 IS NOT DISTINCT FROM m.activity_past_2
 ORDER BY segment_name
 ```
+|target_month|segment_name|cnt       |
+|------------|------------|----------|
+|2014-11-01  |休眠          |8306      |
+|2014-11-01  |休眠→復活       |151       |
+|2014-11-01  |新規          |10793     |
+|2014-11-01  |新規→休眠       |10378     |
+|2014-11-01  |新規→継続       |866       |
+|2014-11-01  |継続          |245       |
+|2014-11-01  |継続→休眠       |758       |
+
 
 このクエリはmaster_activityでセグメント名に変換する際に注意が必要で，「新規」のセグメント名を割り振る場合には，双方のactivity_past_2をNULLで一致させることになるのでON節において「IS NOT DISTINCT FROM」を使っている点です。これが単純なイコールですと「新規」のセグメントは結合後に登場しません。
 
@@ -525,6 +592,15 @@ FROM
 GROUP BY td_title_list
 ORDER BY cnt DESC
 ```
+|td_title_list|size  |cnt       |
+|-------------|------|----------|
+|["Treasure Data - データ分析をクラウドで、シンプルに。"]|1     |14080     |
+|["Treasure Data - データ分析をクラウドで、シンプルに。", "Treasure Data - データ分析をクラウドで、シンプルに。"]|2     |3305      |
+|["Treasure Data - データ分析をクラウドで、シンプルに。", "企業情報"]|2     |858       |
+|["プライベートDMPソリューション”TREASURE(トレジャー) DMP(ディーエムピー)”を 4月より提供開始 - プレスリリース"]|1     |659       |
+|["Treasure Data - データ分析をクラウドで、シンプルに。", "サービス概要"]|2     |504       |
+
+
 次に，順番とリスト内のタイトルの重複を除外したリストによる集計を行います。これは，1セッション内で閲覧されたユニークなタイトルの集合を意味します。
 ```sql
 WITH session_table AS
@@ -545,6 +621,14 @@ FROM
 GROUP BY td_title_list
 ORDER BY cnt DESC
 ```
+|td_title_list|size  |cnt       |
+|-------------|------|----------|
+|["Treasure Data - データ分析をクラウドで、シンプルに。"]|1     |17920     |
+|["Treasure Data - データ分析をクラウドで、シンプルに。", "企業情報"]|2     |1187      |
+|["Treasure Data - データ分析をクラウドで、シンプルに。", "サービス概要"]|2     |763       |
+|["プライベートDMPソリューション”TREASURE(トレジャー) DMP(ディーエムピー)”を 4月より提供開始 - プレスリリース"]|1     |704       |
+|["TD Private Seminar"]|1     |556       |
+
 
 ## パス分析
 
