@@ -46,6 +46,7 @@ LIMIT 100
 2. COUNT(DISTINCT x)
 3. ORDER BY
 4. UNION（UNION ALLではない）
+
 これらの処理は，単一ノード上でしか実行できない（分散できない）ため，非常に時間がかかってしまう場合があります。また，「Exceeded max (local) memory xxGB error」というエラーで処理が中断してしまう可能性があります。可能な対処方法としては以下のようなものがあります。
 
 1. DISTINCT → GROUP BYで置き換える
