@@ -655,6 +655,12 @@ SELECT cv_level, cv_title
     (3,'お申し込みを受け付けました')
   ) AS t(cv_level,cv_title)
 ```
+|cv_level  |cv_title|
+|----------|--------|
+|5         |資料ダウンロード|
+|4         |お問い合わせ確認|
+|3         |お申し込みを受け付けました|
+
 
 ### Step2. コンバージョン履歴テーブル
 下記のクエリにより，コンバージョンのあったユーザーのアクセスログで該当するコンバージョンレコードを抽出したコンバージョン履歴テーブルを作ります。
@@ -680,6 +686,12 @@ SELECT td_client_id, cv_title, td_title, ROW_NUMBER() OVER( PARTITION BY td_clie
   )
   ORDER BY td_client_id, cv_id
 ```
+|td_client_id|cv_title|td_title                |cv_id|time      |
+|------------|--------|------------------------|-----|----------|
+|003e1280-7640-4cba-8ab8-b9a55fc12923|お問い合わせ確認|お問い合わせ確認 - Treasure Data|1    |1462931828|
+|0075c928-2661-4d44-c5da-e244faa85e77|資料ダウンロード|資料ダウンロードを受け付けました        |1    |1462516530|
+|009fb5f1-b726-4cce-f6cd-ea0eb8c85068|資料ダウンロード|資料ダウンロードを受け付けました        |1    |1466864498|
+
 クエリ中の下記の部分ではコンバージョンレコードを抽出しています。master_cvの定義を変えてURLで比較したり，cv_levelを引き上げたりする場合には，ここを変えることになります。
 ```sql
     WHERE REGEXP_LIKE(td_title, cv_title)
@@ -743,6 +755,12 @@ SELECT
 FROM cv_organized_join_table
 ORDER BY td_client_id, cv_id, node_id
 ```
+|td_client_id|node_id|cv_id                   |cv_flag|td_title  |cv_title|time      |cv_time   |
+|------------|-------|------------------------|-------|----------|--------|----------|----------|
+|003e1280-7640-4cba-8ab8-b9a55fc12923|1      |1                       |0      |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|お問い合わせ確認|1462930626|1462931828|
+|003e1280-7640-4cba-8ab8-b9a55fc12923|2      |1                       |0      |お問い合わせ - Treasure Data|お問い合わせ確認|1462930688|1462931828|
+|003e1280-7640-4cba-8ab8-b9a55fc12923|3      |1                       |1      |お問い合わせ確認 - Treasure Data|お問い合わせ確認|1462931828|1462931828|
+
 
 ### Step3’. 非コンバージョンパス
 パスの数（絶対数）を求めるだけならばコンバージョンパスだけで可能ですが，コンバージョンしなかった同じパスの数と比較すれば比率を求めることができます。絶対数ではトップページを含むパスの回数が多く現れていたものが，比率を見ることでより内部の重要なページにフォーカスが当てられることもあります。
@@ -779,6 +797,21 @@ cv_history AS
   ON cv_history.td_client_id IS NULL
   ORDER BY td_client_id, node_id
 ```
+|td_client_id|node_id|cv_id                   |td_title|time      |
+|------------|-------|------------------------|--------|----------|
+|000077fb-2c93-4cd7-d9d0-293866aaec31|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1461454040|
+|000077fb-2c93-4cd7-d9d0-293866aaec31|2      |1                       |企業情報 - Treasure Data|1461454057|
+|000077fb-2c93-4cd7-d9d0-293866aaec31|3      |1                       |採用情報 - Treasure Data|1461454142|
+|000077fb-2c93-4cd7-d9d0-293866aaec31|4      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1461454166|
+|0005348a-a71f-4d65-e90c-599c9590312d|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1463487235|
+|000696ff-bf86-4f0f-8ede-b74825fa3a83|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1464672788|
+|000696ff-bf86-4f0f-8ede-b74825fa3a83|2      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1464672788|
+|000a0d59-c68d-42f7-8c88-8d0966762175|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1465736664|
+|000d05f0-ff3e-467b-b604-da1f8c90bd77|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1465889105|
+|0011c125-cfb0-4533-b69c-a4eae09536d4|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1466552208|
+|0011c125-cfb0-4533-b69c-a4eae09536d4|2      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1466747881|
+|0012bd82-a511-49d6-a4b0-baf9d4949c5f|1      |1                       |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|1466830259|
+|0012bd82-a511-49d6-a4b0-baf9d4949c5f|2      |1                       |サービス概要 - Treasure Data|1466830321|
 
 ### Step4. コンバージョンパスにおける（1ステップ）遷移回数分析
 コンバージョンパスを求められたら，そのパス内のページからページへの遷移回数を求めて集計します。例えば， {A→B→C→A→G} というパスがあるとすると，「A→B」「B→C」「C→A」「A→G」が1回ずつ数えられます。この集計により，せっかくのパスを分解して点で見ているように思えるかもしれませんが，この遷移の全体を可視化（後ほど紹介）すると大きな流れを見ることができ有益です。
@@ -844,6 +877,13 @@ WHERE lead_td_title IS NOT NULL
 GROUP BY cv_title, td_title, lead_td_title
 ORDER BY cv_title, cnt DESC
 ```
+|cv_title  |td_title|lead_td_title           |cnt|
+|----------|--------|------------------------|---|
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|111|
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|サービス概要 - Treasure Data  |49 |
+|お問い合わせ確認  |リソース - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|37 |
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|リソース - Treasure Data    |34 |
+
 
 ### Step4’. 非コンバージョンパスにおける（1ステップ）遷移回数分析
 同様に非コンバージョンパスからも遷移回数を集計しておきます。
@@ -891,6 +931,13 @@ WHERE lead_td_title IS NOT NULL
 GROUP BY td_title, lead_td_title
 ORDER BY cnt DESC 
 ```
+|td_title  |lead_td_title|cnt                     |
+|----------|-------------|------------------------|
+|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|10358                   |
+|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|サービス概要 - Treasure Data|2235                    |
+|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|企業情報 - Treasure Data|2166                    |
+|サービス概要 - Treasure Data|サービス概要 - Treasure Data|1562                    |
+
 
 ### Step5. コンバージョン率の高い遷移導出
 同じ遷移のコンバージョンと非コンバージョン回数があれば，各々の遷移について以下のようにCV率を求めることができます。
@@ -988,7 +1035,18 @@ JOIN
 ON t1.td_title = t2.td_title AND t1.lead_td_title = t2.lead_td_title
 ORDER BY cv_title, cv_cnt DESC
 ```
-上記のクエリの結果は，下図のようなパス図として可視化することができます（ただし，この図は上記の結果とは異なるデータから作ったものであることをご了承ください）。これによって全体の遷移とそのCV率を一望できます。さらに，矢印の太さがCV率の大きさを表しているので，太い矢印の連続を見ていくことでCV率の高いパス（ゴールデンパス）を見出すことができます。
+|cv_title  |td_title|lead_td_title           |cv_ratio            |cv_cnt|non_cv_cnt|
+|----------|--------|------------------------|--------------------|------|----------|
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.010601719197707736|111   |10359     |
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|サービス概要 - Treasure Data  |0.021453590192644482|49    |2235      |
+|お問い合わせ確認  |リソース - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.11455108359133127 |37    |286       |
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|リソース - Treasure Data    |0.08695652173913043 |34    |357       |
+|お問い合わせ確認  |お問い合わせ - Treasure Data|お問い合わせ確認 - Treasure Data|0.5                 |30    |30        |
+|お問い合わせ確認  |サービス概要 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.030335861321776816|28    |895       |
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|お問い合わせ - Treasure Data  |0.1891891891891892  |21    |90        |
+|お問い合わせ確認  |企業情報 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.019853709508881923|19    |938       |
+|お問い合わせ確認  |連携するシステム一覧 - Treasure Data|パートナー企業 - Treasure Data |0.06666666666666667 |16    |224       |
+|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|ニュースルーム - Treasure Data |0.09803921568627451 |15    |138       |
 
 ### Step6. コンバージョンパス集計（集合版）
 個々のコンバージョンパスをそのまま集計する理想的な方法は，そのバリエーションの多さゆえに今回のサンプルデータでは疎な集計となってしまうため，重複するページを排除して順番を統一した「集合」を集計することにします。
@@ -1058,6 +1116,14 @@ FROM
 GROUP BY cv_title, td_title_trans
 ORDER BY cv_title DESC, cnt DESC
 ```
+|cv_title  |td_title_trans|path_length             |cnt                 |
+|----------|--------------|------------------------|--------------------|
+|資料ダウンロード  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data - 資料ダウンロードを受け付けました|3                       |485                 |
+|資料ダウンロード  |資料ダウンロードを受け付けました|1                       |101                 |
+|資料ダウンロード  |TD Private Seminar - Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data - 資料ダウンロードを受け付けました|3                       |18                  |
+|資料ダウンロード  |トレジャーデータ会社概要資料ダウンロードを受け付けました|1                       |13                  |
+|資料ダウンロード  |TD Private Seminar - 資料ダウンロードを受け付けました|3                       |8                   |
+
 
 純粋なコンバージョンパスを集計したい場合は，上記のクエリでコメントアウトした部分を使ってください。
 
@@ -1160,6 +1226,15 @@ AND 1 < t1.path_length
 GROUP BY cv_title, t1.td_title_set, path_length 
 ORDER BY cv_title DESC, cv_ratio DESC
 ```
+|cv_title  |td_title_set|path_length             |cv_ratio            |cv_cnt|non_cv_cnt|
+|----------|------------|------------------------|--------------------|------|----------|
+|資料ダウンロード  |["TD Private Seminar", "Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data", "ダウンロードを受け付けました", "トレジャーデータ会社概要ダウンロード", "資料ダウンロードを受け付けました", nil]|6                       |0.5                 |1     |1         |
+|資料ダウンロード  |["TD Private Seminar", "Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data", "ダウンロードを受け付けました", "トレジャーデータ会社概要ダウンロード", "トレジャーデータ概要ビデオ", "資料ダウンロードを受け付けました"]|6                       |0.3333333333333333  |1     |2         |
+|資料ダウンロード  |["Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data", "ダウンロードを受け付けました", "トレジャーデータ会社概要ダウンロード", "登録完了:", "資料ダウンロードを受け付けました", nil]|6                       |0.3333333333333333  |1     |2         |
+|資料ダウンロード  |["TD Private Seminar", "Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data", "ダウンロードを受け付けました", "資料ダウンロードを受け付けました", nil]|5                       |0.14285714285714285 |1     |6         |
+|資料ダウンロード  |["TD Private Seminar", "ダウンロードを受け付けました", "トレジャーデータ会社概要ダウンロード", "資料ダウンロードを受け付けました"]|4                       |0.14285714285714285 |1     |6         |
+|資料ダウンロード  |["Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data", "ダウンロードを受け付けました", "トレジャーデータ概要ビデオ", "資料ダウンロードを受け付けました"]|4                       |0.05555555555555555 |1     |17        |
+
 
 non_cv_title_setとcv_title_setを比較するには，前者にcvタイトル以外のタイトルをすべて含むset（その他も含んで可）の合計を後者と比較します。以下のように結果がcv_titleの1要素のみとなるものがこの条件です。
 ```sql
