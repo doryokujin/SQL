@@ -1050,10 +1050,6 @@ ORDER BY cv_title, cv_cnt DESC
 |お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|リソース - Treasure Data    |0.08695652173913043 |34    |357       |
 |お問い合わせ確認  |お問い合わせ - Treasure Data|お問い合わせ確認 - Treasure Data|0.5                 |30    |30        |
 |お問い合わせ確認  |サービス概要 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.030335861321776816|28    |895       |
-|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|お問い合わせ - Treasure Data  |0.1891891891891892  |21    |90        |
-|お問い合わせ確認  |企業情報 - Treasure Data|Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|0.019853709508881923|19    |938       |
-|お問い合わせ確認  |連携するシステム一覧 - Treasure Data|パートナー企業 - Treasure Data |0.06666666666666667 |16    |224       |
-|お問い合わせ確認  |Treasure Data - データ分析をクラウドで、シンプルに。 - Treasure Data|ニュースルーム - Treasure Data |0.09803921568627451 |15    |138       |
 
 ### Step6. コンバージョンパス集計（集合版）
 個々のコンバージョンパスをそのまま集計する理想的な方法は，そのバリエーションの多さゆえに今回のサンプルデータでは疎な集計となってしまうため，重複するページを排除して順番を統一した「集合」を集計することにします。
